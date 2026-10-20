@@ -1,0 +1,41 @@
+Lane Frontier Web v0.15.6 | GitHub Pages 公開手順
+
+【前提】
+既存の公式HP用リポジトリ lane-frontier は触りません。
+Web対戦版は新しいリポジトリ lane-frontier-web に公開してください。
+
+1. この ZIP を Windows の好きな場所に展開。
+   lane-frontier-web フォルダがプロジェクトのルートです。
+   src や public だけを既存の公式HPに上書きしないでください。
+
+2. 公開する前に動作チェック（任意）
+   VS Codeで展開した lane-frontier-web を開き、ターミナルで実行:
+     npm install
+     npm run dev
+   表示された localhost のURLを開き、カード画像を確認してください。
+   ※ 開発中のデータは新旧いずれもブラウザ更新で消えます。
+
+3. GitHub Desktop に登録
+   GitHub Desktop を起動し、File → Add local repository… で
+   展開した lane-frontier-web フォルダを選びます。
+   Gitリポジトリではないと表示されたら、Create a repository here を押します。
+   Summary欄などを入力して最初のコミットを作ります。
+   その後 Publish repository を選び、リポジトリ名 lane-frontier-web を指定。
+   Pages は公開サイトになるため、GitHub Freeを使う場合は Public にしてください。
+   ※ 団体アカウントで公開したければ、Publish時にOwnerを適切に選んでください。
+
+4. GitHub の新しい lane-frontier-web リポジトリをブラウザで開き、
+   Settings → Pages → Build and deployment → Source で GitHub Actions を選択。
+
+5. リポジトリの Actions タブで
+   Deploy Lane Frontier Web to GitHub Pages の処理が成功したら、
+   Settings → Pages に表示されるURLを開いてください。
+   Actionsが実行されていない場合は、Actionsから workflow_dispatch を実行します。
+
+【重要】
+- 画像容量が原因でGitHubへのアップロードが失敗するサイズではありません。
+- このZIPにはカード29枚、移動範囲14枚を含みます。
+- Viteの本番用baseはGitHub Actionsで自動決定されます。
+- 試合は同一端末でのローカル対戦です。別PC同士の通信対戦機能は未実装です。
+- GitHubにアップロードするとカード画像とゲームコードが公開されます。
+- これ以降はバージョンごとのsrcを上書きしてPushすれば更新可能です。

@@ -1,0 +1,12 @@
+:root {
+  font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', system-ui, sans-serif;
+  color: #f3f5ef;
+  background: #102129;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button { font: inherit; }
+button:disabled { opacity: .45; cursor: not-allowed !important; }
+#root { min-height: 100vh; }
