@@ -73,7 +73,7 @@ export function defenseAt(game: GameState, index: number): number | null {
 export function movementDirections(game: GameState, index: number): string[] {
   const cell = game.board[index]; if (!cell.monster) return []
   const card = cardInfo(cell.monster.card.cardId)
-  const base = card?.movement?.split(',').map(s => s.trim()).filter(x => x in directions) ?? []
+  const base: string[] = card?.movement?.split(',').map(s => s.trim()).filter(x => x in directions) ?? []
   if (equippedCard(cell)?.cardId === 'LF-016') base.push('2')
   return [...new Set(base)]
 }

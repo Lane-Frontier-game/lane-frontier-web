@@ -17,9 +17,11 @@ import { MovementArtwork } from './components/MovementArtwork'
 import { visibleBoardIndices, visibleCoordinate, shouldRotateCard } from './game/view'
 import type { DeckElement } from './game/decks'
 import type { CardInstance, FieldCell, GameState, PlayerId } from './game/types'
+import { useOnlineRoom } from './online/useOnlineRoom'
+import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.15.6 移動範囲画像反映版'
+const BUILD_LABEL = 'v0.16.1 Firebase接続版'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -35,7 +37,10 @@ const LEGACY_SAVE_KEY = 'lane-frontier-local-v0.15'
 
 
 function App() {
-  const [game, setGame] = useState<GameState>(createInitialGameState)
+  const [game, setGameLocal] = useState<GameState>(createInitialGameState)
+  const [onlineMode, setOnlineMode] = useState(false)
+  const [roomCodeInput, setRoomCodeInput] = useState('')
+  const online = useOnlineRoom()
   const [started, setStarted] = useState(false)
   // 初手引き直しは各プレイヤー一度だけ。交代画面なし。
   const [setupStage, setSetupStage] = useState<'player1' | 'player2' | 'play'>('player1')
@@ -49,20 +54,50 @@ function App() {
   const [testRemove, setTestRemove] = useState(false)
   const [message, setMessage] = useState('手札を選ぶか、フェイズを進めてください')
 
-  const owner = game.activePlayer
+  const owner = onlineMode && online.session ? online.session.seat : game.activePlayer
+  const isMyTurn = !onlineMode || (online.room?.stage === 'playing' && online.session?.seat === game.activePlayer)
+  const equipmentOwner = game.board.find(cell => cell.monster && !cell.monster.equippedId && cell.equipments.length > 1)?.monster?.card.owner
+  const canResolveEquipment = onlineMode && !!online.session && online.room?.stage === 'playing' && equipmentOwner === online.session.seat
+  const canAct = isMyTurn || canResolveEquipment
+
+  function setGame(update: GameState | ((prev: GameState) => GameState)) {
+    if (onlineMode && online.session) {
+      if (!canAct || online.busy) return
+      const next = typeof update === 'function' ? update(game) : update
+      online.commit(next, 'action')
+    } else {
+      setGameLocal(update)
+    }
+  }
+
+  useEffect(() => {
+    if (!onlineMode || !online.session || !online.room?.gameJson) return
+    try {
+      const next = JSON.parse(online.room.gameJson) as GameState
+      setGameLocal(next)
+      setDeckChoices({ player1: online.room.decks.player1 || null, player2: online.room.decks.player2 || null })
+      setSetupStage(online.room.stage === 'playing' ? 'play' : online.session.seat)
+      setStarted(true)
+      setMovingFrom(null)
+      setSelectedId(null)
+    } catch {
+      setMessage('オンライン対戦のデータを読み込めませんでした')
+    }
+  }, [onlineMode, online.session?.code, online.session?.seat, online.room?.gameJson, online.room?.stage])
+
   const player = game.players[owner]
   const opponent = game.players[otherPlayer(owner)]
   const selectedCard = player.hand.find(c => c.instanceId === selectedId)
-  const destinations = movingFrom === null ? [] : legalMoves(game, movingFrom)
+  const destinations = !isMyTurn || movingFrom === null ? [] : legalMoves(game, movingFrom)
   const boardIndices = visibleBoardIndices(owner)
   const selectedData = selectedCard ? cardInfo(selectedCard.cardId) : null
-  const magicTargets = selectedCard && selectedData?.category === 'マジック' && game.phase === 'main'
+  const magicTargets = isMyTurn && selectedCard && selectedData?.category === 'マジック' && game.phase === 'main'
     ? magicTargetIndices(game, selectedCard.cardId, owner) : []
   const pendingEquipIndex = game.board.findIndex(cell => cell.monster && !cell.monster.equippedId && cell.equipments.length > 1)
   const pendingEquip = pendingEquipIndex >= 0 ? game.board[pendingEquipIndex] : null
-  const placingTargets = selectedCard && selectedData?.category !== 'マジック' && !pendingEquip
+  const placingTargets = isMyTurn && selectedCard && selectedData?.category !== 'マジック' && !pendingEquip
     ? placementTargets(game, selectedCard, owner) : []
-  const discardingForOcean = selectedCard?.cardId === 'LF-023' && game.phase === 'main'
+  const discardingForOcean = isMyTurn && selectedCard?.cardId === 'LF-023' && game.phase === 'main'
 
   // v0.15.0で保存した古い盤面も一度消す。
   useEffect(() => {
@@ -82,6 +117,13 @@ function App() {
   }
 
   function finishMulligan() {
+    if (onlineMode && online.session) {
+      if (online.busy || online.room?.stage !== 'mulligan' || online.room.mulliganDone[online.session.seat]) return
+      const updated = mulligan(game, online.session.seat, mulliganSelected)
+      online.commit(updated, 'mulligan')
+      setMulliganSelected([])
+      return
+    }
     if (setupStage !== 'player1' && setupStage !== 'player2') return
     const mulliganPlayer = setupStage
     setGame(prev => {
@@ -99,7 +141,7 @@ function App() {
   }
 
   function useEquipment(cellIndex: number, equipmentId: string) {
-    if (game.winner) return
+    if (!canAct || online.busy || game.winner) return
     const cell = game.board[cellIndex]
     const updated = equipMonsterInCell(cell, equipmentId)
     if (!updated) { setMessage('この装備は使用できません'); return }
@@ -116,7 +158,7 @@ function App() {
   }
 
   function chooseMonsterEffect(activate: boolean) {
-    if (game.winner || pendingEquip) return
+    if (!isMyTurn || online.busy || game.winner || pendingEquip) return
     const result = resolveOptionalMonsterEffect(game, activate)
     const settled = result.game
     setGame(settled)
@@ -126,6 +168,7 @@ function App() {
   }
 
   function useMagic(card: CardInstance, options: { targetIndex?: number; discardInstanceId?: string }) {
+    if (!isMyTurn || online.busy) return
     if (game.pendingEffect || pendingEquip) { setMessage('まずモンスターの効果か装備を選んでください'); return }
     const result = castMagic(game, card.instanceId, options)
     if (result.success) {
@@ -137,7 +180,7 @@ function App() {
   }
 
   function discardCard() {
-    if (game.winner || pendingEquip || game.pendingEffect || !selectedCard) return
+    if (onlineMode || game.winner || pendingEquip || game.pendingEffect || !selectedCard) return
     const removed = selectedCard
     setGame(prev => {
       const p = prev.players[prev.activePlayer]
@@ -150,6 +193,7 @@ function App() {
   }
 
   function playCardAt(index: number, card: CardInstance) {
+    if (!isMyTurn || online.busy) return
     if (game.winner || game.pendingEffect || pendingEquip) { setMessage('まず選択待ちの効果を解決してください'); return }
     const cardData = cardInfo(card.cardId)
     if (!cardData) { setMessage('カードデータが見つかりません'); return }
@@ -279,6 +323,12 @@ function App() {
   }
 
   function handleCellClick(index: number) {
+    if (onlineMode && (!isMyTurn || online.busy)) {
+      setInspect(index)
+      setInspectedEquipmentId(null)
+      setMovingFrom(null)
+      return
+    }
     if (game.winner) return
     if (pendingEquip) { setMessage('まず使用する装備を1枚選んでください'); return }
     if (game.pendingEffect) { setMessage('まず右側でモンスターの任意効果を選んでください'); return }
@@ -321,6 +371,7 @@ function App() {
   }
 
   function nextPhase() {
+    if (!isMyTurn || online.busy) return
     if (game.winner || pendingEquip || game.pendingEffect) { setMessage('先に装備またはモンスターの任意効果を選んでください'); return }
     let next: GameState
     if (game.phase === 'start') {
@@ -557,6 +608,7 @@ function App() {
   }
 
   function newGame() {
+    if (onlineMode) return
     const first = deckChoices.player1
     const second = deckChoices.player2
     if (!first || !second) return
@@ -570,6 +622,7 @@ function App() {
   }
 
   function changeDecks() {
+    if (onlineMode) return
     setStarted(false)
     setSetupStage('player1')
     setMulliganSelected([])
@@ -595,6 +648,39 @@ function App() {
     setMessage(`${first}デッキ 対 ${second}デッキ：対戦開始！`)
   }
 
+  if (onlineMode && (!online.room?.gameJson || !online.session)) {
+    const room = online.room
+    const mySeat = online.session?.seat
+    return <main className="game-app">
+      <header className="game-header"><div><h1>Lane Frontier</h1><p>{BUILD_LABEL}</p></div></header>
+      <section className="deck-setup online-lobby">
+        <div className="online-lobby-header"><h2>オンライン対戦</h2><button type="button" className="small-btn" onClick={() => { online.leave(); setOnlineMode(false); setStarted(false) }}>ローカル対戦に戻る</button></div>
+        {!isOnlineConfigured && <p className="online-warning">オンライン機能は準備できていますが、Firebaseの接続設定がまだ必要です。「オンライン設定手順.txt」に従って設定してください。</p>}
+        {!online.session ? <>
+          <p>2台のPCで対戦します。片方が部屋を作り、もう片方が8文字の部屋番号で参加してください。</p>
+          <div className="online-actions"><button type="button" disabled={online.busy || !isOnlineConfigured} className="phase-next" onClick={online.create}>部屋を作る</button></div>
+          <div className="online-join"><input value={roomCodeInput} maxLength={8} placeholder="8文字の部屋番号" onChange={e => setRoomCodeInput(e.target.value.toUpperCase())} /><button type="button" disabled={online.busy || !isOnlineConfigured} className="small-btn" onClick={() => online.join(roomCodeInput)}>部屋に参加</button></div>
+        </> : <>
+          <p>部屋番号：<strong className="online-room-code">{online.session.code}</strong> <button type="button" className="small-btn" onClick={() => navigator.clipboard.writeText(online.session!.code)}>コピー</button></p>
+          <p>あなたは<strong>プレイヤー{mySeat === 'player1' ? '1（先攻）' : '2（後攻）'}</strong>です。</p>
+          {room?.stage === 'waiting' && <p className="online-waiting">相手の参加を待っています。この部屋番号を相手に教えてください。</p>}
+          {room?.stage === 'choosing' && <>
+            <p>自分のデッキを選んでください。相手も選び終わると自動的に対戦準備へ進みます。</p>
+            <div className="deck-options">{DECK_ELEMENTS.map(element => {
+              const base = { '火': 'LF-009', '風': 'LF-018', '水': 'LF-027' }[element]
+              return <button type="button" key={element} disabled={online.busy} className={`deck-option ${mySeat && room.decks[mySeat] === element ? 'chosen' : ''}`} onClick={() => online.chooseDeck(element)}>
+                <img src={cardImage(base)} alt={`${element}属性の領土`} /><strong>{element}デッキ</strong><span>{mySeat && room.decks[mySeat] === element ? '選択済み ✓' : '選択する'}</span>
+              </button>
+            })}</div>
+            {mySeat && room.decks[mySeat] && <p className="online-waiting">{room.decks[mySeat]}デッキ選択済み。相手の選択待ち…</p>}
+          </>}
+        </>}
+        {online.busy && <p>通信中…</p>}
+        {online.error && <p className="online-error" role="alert">{online.error}</p>}
+      </section>
+    </main>
+  }
+
   if (!started) {
     return (
       <main className="game-app">
@@ -605,7 +691,7 @@ function App() {
           </div>
         </header>
         <section className="deck-setup">
-          <h2>デッキ選択</h2>
+          <div className="online-lobby-header"><h2>デッキ選択</h2><button type="button" className="small-btn" onClick={() => { setOnlineMode(true); setStarted(false) }}>オンライン対戦 →</button></div>
           <p>火・風・水から各プレイヤーのデッキを選択してください。現在は1台のPCで交互に操作するテスト版です。</p>
           <p className="deck-rule">各40枚：基礎領土16枚 ＋ それ以外の8種類を各3枚。開始時にシャッフルして7枚ドローします。</p>
           {(['player1', 'player2'] as const).map(playerId => (
@@ -639,15 +725,19 @@ function App() {
     )
   }
 
+  if (onlineMode && online.room?.stage === 'mulligan' && online.session && online.room.mulliganDone[online.session.seat]) {
+    return <main className="game-app"><section className="mulligan-screen"><h1>引き直し完了</h1><p>相手のマリガンが終わるのを待っています。</p><p>部屋番号：{online.session.code}</p>{online.error && <p role="alert" className="online-error">{online.error}</p>}</section></main>
+  }
+
   if (setupStage !== 'play') {
-    const mulliganPlayer: PlayerId = setupStage === 'player1' ? 'player1' : 'player2'
+    const mulliganPlayer: PlayerId = onlineMode && online.session ? online.session.seat : setupStage === 'player1' ? 'player1' : 'player2'
     const hand = game.players[mulliganPlayer].hand
     return (
       <main className="game-app">
         <header className="game-header"><div><h1>Lane Frontier</h1><p>ゲームの準備・初手の引き直し <span className="test-tag">{BUILD_LABEL}</span></p></div></header>
         <section className="mulligan-screen">
           <div className="setup-progress">{mulliganPlayer === 'player1' ? '1 / 2' : '2 / 2'}　{displayPlayer(mulliganPlayer)}</div>
-          <h2>{displayPlayer(mulliganPlayer)}：マリガン</h2>
+          <h2>{displayPlayer(mulliganPlayer)}：マリガン</h2>{onlineMode && <p>自分の手札だけで引き直しを確定してください。相手の手札は画面に表示されません。</p>}
           <p>最初の手札7枚から、引き直したいカードを選んでください。選んだ順番で城の一番下へ送り、同じ枚数を城の上から引きます。引き直しは1回だけです。</p>
           <div className="mulligan-hand">
             {hand.map(card => {
@@ -665,7 +755,7 @@ function App() {
             })}
           </div>
           <p className="mulligan-count">引き直すカード：{mulliganSelected.length}枚　／　初手7枚・城{game.players[mulliganPlayer].deck.length}枚</p>
-          <button type="button" className="phase-next" onClick={finishMulligan}>
+          <button type="button" className="phase-next" onClick={finishMulligan} disabled={online.busy}>
             {mulliganSelected.length > 0 ? `${mulliganSelected.length}枚引き直して確定 →` : '引き直さずに確定 →'}
           </button>
         </section>
@@ -673,7 +763,10 @@ function App() {
     )
   }
 
-  if (pendingEquip?.monster && pendingEquip.monster.card.owner !== owner) {
+  if (onlineMode && pendingEquip?.monster && pendingEquip.monster.card.owner !== owner) {
+    return <main className="game-app"><section className="mulligan-screen"><h1>装備の選択待ち</h1><p>相手プレイヤーが使用する装備を選んでいます。</p></section></main>
+  }
+  if (!onlineMode && pendingEquip?.monster && pendingEquip.monster.card.owner !== owner) {
     const chooser = pendingEquip.monster.card.owner
     return <main className="game-app equipment-handoff">
       <section className="mulligan-screen">
@@ -703,18 +796,22 @@ function App() {
           <span className="version-label">{BUILD_LABEL}</span>
         </div>
         <div className="game-header-actions">
-          <button type="button" className="small-btn" onClick={changeDecks}>デッキ変更</button>
-          <button type="button" className="small-btn" onClick={newGame}>再戦</button>
+          {onlineMode ? <button type="button" className="small-btn" onClick={() => { online.leave(); setOnlineMode(false); setStarted(false); setGameLocal(createInitialGameState()); setDeckChoices({player1:null,player2:null}) }}>部屋を退出</button> : <>
+            <button type="button" className="small-btn" onClick={changeDecks}>デッキ変更</button>
+            <button type="button" className="small-btn" onClick={newGame}>再戦</button>
+          </>}
         </div>
       </header>
 
       <div className="status-bar" aria-label="現在の対戦状況">
-        <strong className="turn-owner">{displayPlayer(owner)}の手番</strong>
+        <strong className="turn-owner">{displayPlayer(game.activePlayer)}の手番{onlineMode ? (isMyTurn ? '（あなた）' : '（相手）') : ''}</strong>
         <span>ターン {game.turn}</span>
         <span className="phase-pill">{PHASE_LABELS[game.phase]}フェイズ</span>
         <span className="status-deck">{deckChoices[owner]}デッキ vs {deckChoices[otherPlayer(owner)]}デッキ</span>
       </div>
       {game.winner && <div className="winner-banner">{displayPlayer(game.winner)}の勝利！ {game.winReason}</div>}
+      {onlineMode && <div className="online-match-bar">部屋 {online.session?.code} ｜ あなたは{displayPlayer(owner)} ｜ {isMyTurn ? 'あなたの手番' : canResolveEquipment ? '装備を選んでください' : '相手の手番・操作待ち'} {online.busy ? '｜通信中…' : ''}</div>}
+      {onlineMode && online.error && <div className="online-error" role="alert">{online.error}</div>}
       <div className="notice" role="status">{message}</div>
 
       <div className="game-layout">
@@ -765,11 +862,11 @@ function App() {
         <div className="panel-title"><h2>手札 <span className="count-label">{player.hand.length}枚</span></h2><span>クリックで選択 / 解除</span></div>
         <div className="hand-phase-controls">
           <div className="hand-phase-label" aria-live="polite">
-            <strong>{displayPlayer(owner)}の手番</strong>
+            <strong>{displayPlayer(game.activePlayer)}の手番</strong>
             <span>ターン {game.turn} ・ {PHASE_LABELS[game.phase]}フェイズ</span>
           </div>
           <button type="button" className="phase-next hand-phase-next" onClick={nextPhase}
-            disabled={!!game.winner || !!pendingEquip || !!game.pendingEffect}>
+            disabled={!isMyTurn || online.busy || !!game.winner || !!pendingEquip || !!game.pendingEffect}>
             {game.phase === 'start' ? 'スタート終了 → ドロー' :
               game.phase === 'draw' ? 'ドロー終了 → 開拓' :
               game.phase === 'develop' ? '開拓終了 → メイン' :
@@ -781,6 +878,7 @@ function App() {
         <div className="hand-list">
           {player.hand.map(card => (
             <button type="button" key={card.instanceId} onClick={() => {
+              if (onlineMode && (!isMyTurn || online.busy)) return
               if (discardingForOcean && selectedCard && card.instanceId !== selectedCard.instanceId) {
                 useMagic(selectedCard, { discardInstanceId: card.instanceId }); return
               }
@@ -808,15 +906,15 @@ function App() {
                 : 'オーガの狂戦士：通常移動で戦闘に勝利しました。さらに1マス前進しますか？'}
             </p>
             <div className="choice-list">
-              <button type="button" onClick={() => chooseMonsterEffect(true)}>効果を使う</button>
-              <button type="button" className="skip-effect" onClick={() => chooseMonsterEffect(false)}>使わない</button>
+              <button type="button" disabled={!isMyTurn || online.busy} onClick={() => chooseMonsterEffect(true)}>効果を使う</button>
+              <button type="button" disabled={!isMyTurn || online.busy} className="skip-effect" onClick={() => chooseMonsterEffect(false)}>使わない</button>
             </div>
           </div>}
           {pendingEquip && <div className="panel-card equip-choice">
             <h2>使用する装備を選択</h2>
             <p>{cardName(pendingEquip.monster!.card.cardId)}が使用する装備を1枚選んでください。相手の装備も使用できます。</p>
             <div className="choice-list">{pendingEquip.equipments.map(card => (
-              <button key={card.instanceId} onClick={() => useEquipment(pendingEquipIndex, card.instanceId)}>
+              <button key={card.instanceId} disabled={!canAct || online.busy} onClick={() => useEquipment(pendingEquipIndex, card.instanceId)}>
                 {cardName(card.cardId)}を使用（{displayPlayer(card.owner)}のカード）
               </button>
             ))}</div>
@@ -882,7 +980,7 @@ function App() {
             <p>使用中：{inspectedCell.monster?.equippedId ? cardName(inspectedCell.equipments.find(e => e.instanceId === inspectedCell.monster?.equippedId)?.cardId ?? '') : 'なし'}</p>
             <p>設置された装備：{inspectedCell.equipments.map(e => `${cardName(e.cardId)}（${displayPlayer(e.owner)}）`).join('、') || 'なし'}</p>
           </details>}
-          <details className="panel-card demo-panel dev-drawer">
+          {!onlineMode && <details className="panel-card demo-panel dev-drawer">
             <summary>開発用テストを表示</summary>
             <p>テスト盤面を読み込むと現在の対戦はリセットされます。</p>
             <label className="test-option"><input type="checkbox" checked={testRemove} onChange={(e: { target: { checked: boolean } }) => { setTestRemove(e.target.checked); resetSelection() }} />選んだマスのカードを墓地へ送る（テスト）</label>
@@ -909,7 +1007,7 @@ function App() {
               <button onClick={() => loadCombinationDemo('currentBattle')}>複合：激流×敵の装備×戦闘</button>
               <button onClick={() => loadCombinationDemo('fallenSpear')}>複合：戦闘後に槍を引き継ぐ</button>
             </div>
-          </details>
+          </details>}
           <details className="panel-card grave-drawer">
             <summary>墓地を見る（自分 {player.graveyard.length}枚 / 相手 {opponent.graveyard.length}枚）</summary>
             <strong>自分の墓地</strong>

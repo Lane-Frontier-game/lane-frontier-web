@@ -509,3 +509,17 @@
   .game-in-play .movement-artwork { width: min(100%, 175px); }
   .card-zoom-dialog img { max-width: 88vw; }
 }
+
+/* オンライン対戦モード */
+.online-lobby-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.online-lobby-header h2 { margin: 0; }
+.online-lobby { max-width: 760px; }
+.online-actions { margin: 20px 0; display: flex; }
+.online-join { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid #46616a; }
+.online-join input { background: #10262e; border: 1px solid #78949b; border-radius: 6px; padding: 10px 14px; color: #fff; font: inherit; font-size: 18px; letter-spacing: .13em; text-transform: uppercase; min-width: 180px; }
+.online-room-code { font-size: 28px; font-weight: 800; letter-spacing: .12em; color: #f0c96c; user-select: all; }
+.online-warning { border-left: 3px solid #ebbb63; background: #393328; padding: 14px; }
+.online-error { margin: 12px 0; border-left: 3px solid #f47575; padding: 10px; background: #462c32; color: #ffe5e5; }
+.online-waiting { background: #253c44; border: 1px solid #52707a; padding: 14px; border-radius: 7px; }
+.online-match-bar { color: #f9dfac; font-weight: 700; margin: 12px 0; padding: 10px 14px; background: #223f43; border-radius: 8px; border: 1px solid #546d68; }
+.online-lobby button:disabled { cursor: not-allowed; opacity: .55; }
