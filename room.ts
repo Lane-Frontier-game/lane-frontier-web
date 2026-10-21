@@ -1,6 +1,7 @@
+// Lane Frontier v0.16.3: guest join fix (atomic update + detailed error)
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth, signInAnonymously } from 'firebase/auth'
-import { getDatabase, get, onValue, ref, runTransaction, type Unsubscribe } from 'firebase/database'
+import { getDatabase, get, onValue, ref, runTransaction, update, type Unsubscribe } from 'firebase/database'
 import { createGameWithDecks, type DeckElement } from '../game/decks'
 import type { GameState, PlayerId } from '../game/types'
 import { firebaseConfig, isOnlineConfigured } from './config'
@@ -64,27 +65,44 @@ export async function joinOnlineRoom(code: string): Promise<{ code: string; seat
   const { database } = services()
   const userId = await uid()
   const roomRef = ref(database, `rooms/${roomCode}`)
-  // 未取得のパスへのトランザクションは最初のコールバックがnullになり、
-  // 存在する部屋への参加まで中断され得るので、先にサーバーから読み込む。
+
+  // 参加ではトランザクションを使わず、先にサーバー上の部屋を読む。
+  // Firebase RTDBのトランザクションは既存ノードにも初回nullを渡し得るため、
+  // 初回提案を誤送信したり参加を取り消してしまう問題が起きていた。
   const preview = await get(roomRef)
   if (!preview.exists()) throw new Error('その部屋番号は見つかりません。')
-  const existing = preview.val() as RoomInfo
-  if (isMember(existing, userId)) {
-    return { code: roomCode, seat: existing.hostUid === userId ? 'player1' : 'player2' }
+  const room = preview.val() as RoomInfo
+  if (isMember(room, userId)) {
+    return { code: roomCode, seat: room.hostUid === userId ? 'player1' : 'player2' }
   }
-  // Firebaseは既存の部屋でもトランザクションの最初に null を渡すことがある。
-  // 先ほどサーバーから取得した値で初回更新案を作り、競合した場合はFirebaseに再試行させる。
-  const result = await runTransaction(roomRef, (cached: RoomInfo | null) => {
-    const room = cached ?? existing
-    if (isMember(room, userId)) return undefined
-    if (room.guestUid || room.stage !== 'waiting') return undefined
-    return { ...room, guestUid: userId, stage: 'choosing', version: room.version + 1 }
-  }, { applyLocally: false })
-  const room = result.snapshot.val() as RoomInfo | null
-  if (!room || !isMember(room, userId)) {
-    throw new Error('部屋が見つからないか、すでに2人揃っています。')
+  if (room.guestUid || room.stage !== 'waiting') {
+    throw new Error('この部屋はすでに2人揃っているか、対戦が始まっています。')
   }
-  return { code: roomCode, seat: room.hostUid === userId ? 'player1' : 'player2' }
+
+  // guestUid・stage・versionを一度に書き換える。
+  // Realtime Databaseのupdateは複数フィールドを原子的に更新する。
+  // Firebaseセキュリティルールが「guestUid空欄→参加者UID」および
+  // 「versionをちょうど1増やす」を検証するので、同時参加者は上書きできない。
+  try {
+    await update(roomRef, {
+      guestUid: userId,
+      stage: 'choosing',
+      version: room.version + 1,
+    })
+  } catch (error) {
+    // 競合した場合も含め、サーバーの現在値で判定し直す。
+    const latest = await get(roomRef)
+    const current = latest.exists() ? latest.val() as RoomInfo : null
+    if (current && isMember(current, userId)) {
+      return { code: roomCode, seat: current.hostUid === userId ? 'player1' : 'player2' }
+    }
+    if (current && (current.guestUid || current.stage !== 'waiting')) {
+      throw new Error('この部屋はすでに2人揃っています。新しい部屋番号を使ってください。')
+    }
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(`部屋への参加がFirebaseに拒否されました（${reason}）。セキュリティルールを確認してください。`)
+  }
+  return { code: roomCode, seat: 'player2' }
 }
 
 export function watchOnlineRoom(code: string, onRoom: (room: RoomInfo | null) => void, onError: (error: Error) => void): Unsubscribe {

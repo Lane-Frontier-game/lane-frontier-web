@@ -1,0 +1,630 @@
+.game-app { margin: 0 auto; max-width: 1180px; min-height: 100vh; padding: 24px; }
+.game-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 18px; }
+.game-header h1 { font-size: clamp(28px, 3.3vw, 42px); line-height: 1.15; letter-spacing: .02em; margin: 0 0 8px; }
+.game-header p, .panel-title span, .board-hint, .instruction { color: #b9c9cb; font-size: 13px; }
+.game-header p { margin: 0; }
+.test-tag { border: 1px solid #8ba3a8; border-radius: 4px; font-size: 11px; padding: 2px 5px; margin-left: 8px; }
+.small-btn { background: #2e4c55; color: #f4f9f5; padding: 9px 12px; border: 1px solid #63838a; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.status-bar { background: #233a42; border: 1px solid #44606a; border-radius: 9px; padding: 12px 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.status-bar strong { color: #fff; }
+.status-bar span { color: #d3e0e0; }
+.phase-next { margin-left: auto; color: #1c2630; background: #e8b85c; padding: 10px 17px; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; }
+.notice { margin: 12px 0; min-height: 36px; padding: 9px 12px; border-left: 3px solid #e6be71; background: #1b3038; color: #f5e4ba; font-size: 14px; }
+.winner-banner { padding: 22px; border: 2px solid #e6be71; background: #39402c; color: #fff4c5; border-radius: 9px; text-align: center; font-weight: bold; font-size: 23px; margin-top: 14px; }
+.game-layout { display: grid; grid-template-columns: minmax(350px, 1.35fr) minmax(280px, .9fr); gap: 18px; align-items: start; }
+.field-panel, .panel-card, .hand-panel, .grave-panel { background: #182d35; border: 1px solid #35505a; border-radius: 10px; padding: 16px; }
+.panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.panel-title h2, .panel-card h2 { margin: 0; font-size: 19px; color: #f7f6eb; }
+.instruction { margin: 9px 0 14px; line-height: 1.6; }
+.board-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 74px)); gap: 5px; justify-content: center; }
+.field-cell { width: 100%; aspect-ratio: 64/84; border: 1px solid #9db9a8; border-radius: 4px; padding: 2px; background: #335f4e; color: #fff; cursor: pointer; overflow: hidden; position: relative; }
+.field-cell.castle1 { background: #375982; }
+.field-cell.castle2 { background: #824448; }
+.field-cell.inspected { outline: 1px solid #d7dad3; outline-offset: 1px; }
+.field-cell.valid-move { outline: 3px solid #f1d86b; outline-offset: 1px; z-index: 2; }
+.field-cell.selected-monster { outline: 3px solid #64c5ff; outline-offset: 1px; z-index: 3; }
+.field-cell img { pointer-events: none; }
+.territory-img { height: 100%; width: 100%; object-fit: contain; display: block; }
+.monster-img { position: absolute; bottom: 2px; right: 0; height: 84%; width: 77%; object-fit: contain; background: #1b1e21a0; }
+.field-cell .territory-img:has(+ .monster-img) { opacity: .4; }
+.castle-label, .equip-count, .equipped-mark, .no-move-mark, .stats, .move-target { position: absolute; z-index: 4; font-size: 10px; padding: 2px 3px; background: #131d22de; border-radius: 3px; line-height: 1.2; }
+.castle-label { left: 2px; top: 2px; }
+.equip-count { right: 2px; top: 2px; background: #e8b85c; color: #172b31; }
+.equipped-mark { right: 2px; top: 18px; background: #407c80; }
+.stats { left: 1px; bottom: 1px; white-space: nowrap; font-size: 9px; }
+.no-move-mark { left: 2px; top: 17px; background: #555b; }
+.move-target { inset: 0; font-size: 14px; display: grid; place-items: center; color: #ffe590; background: #0d2c29a8; font-weight: bold; }
+.board-hint { text-align: center; line-height: 1.6; margin: 12px 0; }
+.test-option { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #c9d2d3; cursor: pointer; }
+.side-panel { display: grid; gap: 14px; }
+.panel-card h2 { margin-bottom: 12px; }
+.panel-card p { margin: 7px 0; line-height: 1.55; font-size: 14px; }
+.effect-text { white-space: pre-line; border-top: 1px solid #38515a; padding-top: 10px; color: #d3dbc9; }
+.small-note { background: #1f3236; }
+.equip-choice { border-color: #e0bd72; background: #3c3730; }
+.choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice-list button { padding: 10px; background: #e8b85c; border: 0; border-radius: 6px; cursor: pointer; color: #1c2930; }
+.hand-panel { margin-top: 18px; }
+.hand-list { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin: 18px 0 6px; }
+.hand-card { width: 76px; height: 107px; padding: 3px; background: #243a41; border: 1px solid #809496; border-radius: 5px; cursor: pointer; }
+.hand-card.selected-card { border: 3px solid #e9c16f; box-shadow: 0 0 10px #e2af5499; }
+.hand-card img { width: 100%; height: 100%; object-fit: contain; }
+.hand-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 48px; margin-top: 8px; font-size: 13px; }
+.discard-btn { background: #793b41; color: #fff; border: none; border-radius: 5px; padding: 10px 12px; cursor: pointer; }
+.grave-panel { margin-top: 18px; }
+.grave-list { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.grave-list img { height: 88px; width: 62px; object-fit: contain; }
+@media (max-width: 760px) {
+  .game-app { padding: 12px; }
+  .game-layout { grid-template-columns: 1fr; }
+  .board-grid { grid-template-columns: repeat(5, minmax(0, 70px)); }
+  .field-panel { padding: 10px; }
+  .status-bar { gap: 10px; }
+  .phase-next { margin-left: 0; }
+}
+.demo-panel .choice-list button { background: #507275; color: #fff; }
+.demo-panel .choice-list button:hover { background: #658b8c; }
+
+/* マジックの対象は移動候補とは別色で強調。 */
+.field-cell.valid-magic { outline: 3px solid #aee8ff; outline-offset: 1px; z-index: 2; }
+.magic-target { color: #f7fdff; background: #184558c9; }
+.magic-choice { border-color: #83cbdc; background: #223c47; }
+
+/* 任意の固有効果は進行を止めて選択を待つ。 */
+.monster-choice { border-color: #acbc83; background: #313e32; }
+.monster-choice .skip-effect { background: #718189; color: #fff; }
+
+
+/* 固定デッキ選択（既存カード画像をそのまま使用） */
+.game-header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.deck-setup { max-width: 920px; margin: 30px auto; padding: 28px; background: #182d35; border: 1px solid #35505a; border-radius: 14px; }
+.deck-setup h2 { margin: 0 0 12px; font-size: 25px; }
+.deck-setup > p { font-size: 14px; color: #ced7d3; line-height: 1.7; }
+.deck-setup .deck-rule { margin: 14px 0 24px; background: #243d42; border-left: 3px solid #e8b85c; padding: 12px; }
+.deck-player { margin: 22px 0 30px; }
+.deck-player h3 { margin: 0 0 12px; font-size: 17px; }
+.deck-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.deck-option { background: #243d46; color: #fff; border: 2px solid #57727a; border-radius: 10px; padding: 12px; cursor: pointer; display: grid; justify-items: center; gap: 8px; transition: border-color .14s, background .14s; }
+.deck-option:hover { background: #35535d; }
+.deck-option.chosen { border-color: #f0c96c; background: #3a4c47; box-shadow: inset 0 0 0 1px #f0c96c; }
+.deck-option img { height: 154px; max-width: 100%; object-fit: contain; }
+.deck-option strong { font-size: 17px; }
+.deck-option span { font-size: 12px; color: #d9e3d9; }
+.deck-option.chosen span { color: #f0c96c; font-weight: bold; }
+.deck-setup-footer { border-top: 1px solid #3a5860; padding-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.deck-setup-footer .phase-next:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 650px) {
+  .deck-setup { padding: 14px; margin: 16px auto; }
+  .deck-options { gap: 6px; }
+  .deck-option { padding: 6px; }
+  .deck-option img { height: 112px; }
+  .deck-option strong { font-size: 13px; }
+  .deck-setup-footer { flex-direction: column; align-items: stretch; }
+  .game-header-actions { justify-content: flex-start; }
+}
+
+/* 手番プレイヤーが常に下側になる盤面。画像だけ相手から見た180度回転で描く。 */
+.field-cell img.enemy-card { transform: rotate(180deg); }
+.board-orientation { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; font-size: 11px; color: #bcd6d6; }
+.board-orientation span:first-child { font-weight: 700; color: #ecd38a; }
+/* 初手引き直し画面。確認後は待機を挟まず次のプレイヤーへ移る。 */
+.mulligan-screen { margin: 36px auto; max-width: 930px; padding: 27px; background: #182d35; border: 1px solid #35505a; border-radius: 12px; }
+.mulligan-screen h2 { font-size: 25px; margin: 10px 0 12px; }
+.mulligan-screen p { color: #d2e1df; line-height: 1.7; }
+.setup-progress { font-size: 13px; color: #e8b85c; font-weight: 700; }
+.mulligan-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 24px 0; }
+.mulligan-card { position: relative; background: #254049; border: 2px solid #607d87; border-radius: 7px; width: 104px; height: 147px; padding: 3px; cursor: pointer; }
+.mulligan-card img { width: 100%; height: 100%; object-fit: contain; }
+.mulligan-card.mulligan-chosen { outline: 3px solid #edc069; background: #66502a; }
+.mulligan-order { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f2c96d; color: #122732; border-radius: 8px; padding: 4px 8px; white-space: nowrap; font-weight: 700; font-size: 12px; }
+.mulligan-count { font-weight: 700; }
+@media (max-width: 640px) {
+  .mulligan-screen { padding: 14px; margin: 14px 0; }
+  .mulligan-card { width: 79px; height: 114px; }
+  .board-orientation { justify-content: center; }
+}
+
+/* 手札と一緒に操作できるフェイズ進行。上部の情報バーから進行ボタンを移設。 */
+.hand-phase-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #233e46;
+  border: 1px solid #4d7378;
+  border-radius: 9px;
+}
+.hand-phase-label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.hand-phase-label strong { color: #fff; }
+.hand-phase-label span { color: #cfdfde; font-size: 14px; }
+.hand-phase-next { margin-left: auto; white-space: nowrap; }
+.hand-phase-next:disabled { opacity: .46; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .hand-phase-next { width: 100%; margin-left: 0; }
+}
+
+/* ------------------------------------------------------------------
+   v0.14.0: 1画面を中心とした対戦用UI
+   開発用テストは details に収納し、従来のゲームロジックを維持する。
+   ------------------------------------------------------------------ */
+.game-in-play {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1650px;
+  height: 100dvh;
+  min-height: 600px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px 12px;
+}
+.game-in-play .game-header {
+  margin: 0;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.game-in-play .brand-line { display: flex; align-items: baseline; gap: 13px; flex-wrap: wrap; }
+.game-in-play .game-header h1 { font-size: clamp(21px, 2.2vw, 29px); margin: 0; line-height: 1.2; }
+.version-label { color: #9ab6bd; font-size: 11px; letter-spacing: .035em; }
+.game-in-play .small-btn {
+  font-size: 12px; padding: 7px 12px; border-radius: 8px;
+  background: #203944; border-color: #47636d;
+}
+.game-in-play .small-btn:hover { border-color: #e8bb6c; }
+.game-in-play .status-bar {
+  flex-shrink: 0; margin: 0; padding: 7px 15px;
+  min-height: 35px; gap: 10px 20px; border-color: #44646b;
+  background: linear-gradient(95deg, #2b4b53 0%, #1b333a 100%);
+}
+.game-in-play .status-bar span { font-size: 13px; }
+.game-in-play .status-bar .turn-owner { color: #f3d38b; }
+.game-in-play .status-bar .phase-pill { color: #f6db9e; font-weight: 700; }
+.game-in-play .status-bar .status-deck { margin-left: auto; color: #afcbd0; font-size: 12px; }
+.game-in-play .winner-banner { flex-shrink: 0; margin: 0; padding: 9px; font-size: 17px; }
+.game-in-play .notice {
+  flex-shrink: 0; margin: 0; min-height: 33px; max-height: 56px;
+  padding: 7px 12px; border-left-color: #f0c276; border-radius: 3px;
+  font-size: 12px; line-height: 1.45; overflow-y: auto;
+}
+.game-in-play .game-layout {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(365px, 1fr) minmax(305px, 365px);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "field side" "hand side";
+  align-items: stretch;
+  gap: 9px 12px;
+}
+.game-in-play .field-panel,
+.game-in-play .hand-panel,
+.game-in-play .panel-card {
+  box-shadow: 0 2px 10px #071b1c20;
+  background: linear-gradient(140deg, #1b333a 0%, #162b33 100%);
+  border-color: #3b5960;
+}
+.game-in-play .field-panel {
+  grid-area: field;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 9px 12px 7px;
+  scrollbar-width: thin;
+}
+.game-in-play .panel-title { align-items: center; }
+.game-in-play .panel-title h2 { font-size: 16px; }
+.game-in-play .panel-title span { font-size: 11px; }
+.game-in-play .board-orientation {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin: 5px 0 3px;
+  font-size: 10px;
+}
+.game-in-play .board-orientation span:first-child { color: #e8bb72; }
+.game-in-play .instruction {
+  font-size: 11px; text-align: center; margin: 0 0 4px;
+  padding: 4px 6px; background: #12262d; color: #c4dcde; border-radius: 5px;
+}
+.game-in-play .board-grid {
+  --cell-size: clamp(40px, 6.25vh, 78px);
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell-size));
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
+  justify-content: center;
+  margin: auto;
+}
+.game-in-play .field-cell {
+  border-radius: 6px; border-color: #76988d;
+  background: linear-gradient(165deg, #427363, #285245);
+  transition: filter .12s ease, border-color .12s ease;
+}
+.game-in-play .field-cell:hover { filter: brightness(1.17); border-color: #f4d99c; }
+.game-in-play .field-cell:focus-visible,
+.game-in-play .hand-card:focus-visible { outline: 3px solid #eec66d; outline-offset: 2px; }
+.game-in-play .field-cell .stats { font-size: clamp(8px, .78vw, 10px); }
+.game-in-play .board-hint {
+  margin: 4px 0 0; line-height: 1.25; color: #b5ccc9; font-size: 10px;
+}
+.game-in-play .hand-panel {
+  grid-area: hand;
+  min-width: 0; min-height: 0; margin: 0;
+  padding: 8px 12px 7px;
+  overflow: hidden;
+}
+.game-in-play .hand-panel .panel-title h2 { line-height: 1.3; }
+.game-in-play .count-label { color: #f2c77e; font-size: 12px; }
+.game-in-play .hand-phase-controls {
+  flex-wrap: nowrap; gap: 8px; min-height: 35px;
+  margin: 4px 0 0; padding: 3px 8px;
+  background: #25444b; border-color: #496d72; border-radius: 7px;
+}
+.game-in-play .hand-phase-label { gap: 7px; min-width: 0; }
+.game-in-play .hand-phase-label strong { font-size: 12px; }
+.game-in-play .hand-phase-label span { font-size: 11px; }
+.game-in-play .phase-next { padding: 8px 13px; border-radius: 6px; font-size: 12px; }
+.game-in-play .hand-list {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  gap: 7px;
+  margin: 6px 0 2px;
+  padding: 2px 4px 5px;
+}
+.game-in-play .hand-card {
+  flex: 0 0 65px;
+  width: 65px;
+  height: 91px;
+  border-radius: 6px;
+  background: #27404b;
+}
+.game-in-play .hand-card:hover { border-color: #e4bf81; transform: translateY(-2px); }
+.game-in-play .hand-card.selected-card { border-color: #f4ce7e; box-shadow: 0 0 0 1px #f4ce7e, 0 0 11px #f6bf5669; }
+.game-in-play .hand-actions {
+  margin: 0; min-height: 14px; gap: 4px 10px;
+  justify-content: space-between; color: #c2d0cd; font-size: 10px;
+}
+.game-in-play .side-panel {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: #476970 #142830;
+  gap: 8px;
+}
+.game-in-play .side-panel .panel-card {
+  flex-shrink: 0;
+  padding: 11px;
+  border-radius: 9px;
+}
+.game-in-play .side-panel .panel-card h2 { font-size: 15px; margin: 0 0 8px; }
+.game-in-play .side-panel .panel-card p { margin: 6px 0; font-size: 12px; }
+.game-in-play .duel-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.game-in-play .duel-stats > div {
+  border: 1px solid #3e5962;
+  border-radius: 6px;
+  background: #243e45;
+  text-align: center;
+  padding: 5px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.game-in-play .duel-stats strong { font-size: 19px; line-height: 1.1; color: #f1ce88; }
+.game-in-play .duel-stats small { font-size: 10px; color: #c0d2d2; }
+.game-in-play .duel-substats { color: #c6d5d3; text-align: center; font-size: 11px !important; margin: 7px 0 0 !important; }
+.game-in-play .focus-preview { display: flex; align-items: flex-start; gap: 10px; }
+.game-in-play .focus-preview img {
+  display: block; flex: 0 0 103px; width: 103px; height: 145px;
+  object-fit: contain; border-radius: 6px; border: 1px solid #597881;
+  background: #132731;
+}
+.game-in-play .focus-description { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.game-in-play .focus-description strong { font-size: 13px; line-height: 1.4; color: #f3e0bb; }
+.game-in-play .focus-description > span { font-size: 11px; color: #c7d8d5; }
+.game-in-play .focus-description p { margin: 5px 0 0; font-size: 11px; line-height: 1.5; color: #e0d8be; white-space: pre-line; }
+.game-in-play .focus-empty { color: #b8c8c9; }
+.game-in-play .panel-card:has(> summary) { padding: 0; }
+.game-in-play summary {
+  cursor: pointer; padding: 10px 11px;
+  font-size: 12px; font-weight: 700; color: #d8e5e1;
+  list-style-position: inside;
+}
+.game-in-play details[open] > summary { border-bottom: 1px solid #47636c; }
+.game-in-play details > p,
+.game-in-play details > strong,
+.game-in-play details > .grave-list,
+.game-in-play details > .choice-list,
+.game-in-play details > .test-option,
+.game-in-play details > .discard-btn { margin: 8px 11px; }
+.game-in-play .choice-list button { font-size: 12px; padding: 8px; }
+.game-in-play .grave-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+.game-in-play .grave-list img { width: 52px; height: 75px; }
+.game-in-play .dev-drawer { order: 10; }
+.game-in-play .dev-drawer > summary { color: #95abb2; font-weight: 500; font-size: 11px; }
+.game-in-play .dev-drawer .choice-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.game-in-play .dev-drawer .choice-list button { background: #375a63; }
+.game-in-play .dev-drawer > .test-option { display: flex; padding: 5px 0; }
+.game-in-play .grave-drawer { order: 8; }
+.game-in-play .monster-choice, .game-in-play .equip-choice, .game-in-play .magic-choice { border-color: #d7b86e; }
+.game-in-play .monster-choice .choice-list button,
+.game-in-play .equip-choice .choice-list button,
+.game-in-play .magic-choice .choice-list button { background: #efc977; color: #213137; }
+
+/* 小さなウィンドウ・タブレットでは各領域を縦に配置して、画面外の切れを防ぐ。 */
+@media (max-width: 900px), (max-height: 610px) {
+  .game-in-play { height: auto; min-height: 100dvh; overflow: visible; padding: 12px; }
+  .game-in-play .game-layout {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas: "field" "hand" "side";
+    overflow: visible;
+  }
+  .game-in-play .field-panel { overflow: visible; }
+  .game-in-play .board-grid { --cell-size: clamp(42px, 10vw, 72px); }
+  .game-in-play .hand-panel { overflow: visible; }
+  .game-in-play .side-panel { overflow: visible; padding: 0; }
+  .game-in-play .notice { max-height: none; }
+  .game-in-play .status-bar .status-deck { margin-left: 0; }
+}
+@media (max-width: 540px) {
+  .game-in-play .game-header { align-items: flex-start; }
+  .game-in-play .brand-line { gap: 3px 8px; }
+  .game-in-play .version-label { font-size: 10px; }
+  .game-in-play .small-btn { padding: 6px 7px; }
+  .game-in-play .board-grid { --cell-size: min(17vw, 62px); }
+  .game-in-play .hand-phase-controls { flex-wrap: wrap; }
+  .game-in-play .hand-phase-next { width: auto; margin-left: auto; }
+  .game-in-play .hand-phase-label span { font-size: 10px; }
+  .game-in-play .board-orientation span:last-child { display: none; }
+}
+/* 広いPC画面では3カラム。戦場・手札・詳細を完全に横並びにする。 */
+@media (min-width: 1101px) and (min-height: 611px) {
+  .game-in-play .game-layout {
+    grid-template-columns: minmax(410px, 1.45fr) minmax(275px, .81fr) minmax(270px, .77fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "field hand side";
+    gap: 12px;
+  }
+  .game-in-play .field-panel { padding: 10px; }
+  .game-in-play .board-grid { --cell-size: clamp(40px, 7.25vh, 80px); }
+  .game-in-play .hand-panel { display: flex; flex-direction: column; gap: 6px; padding: 12px 11px; }
+  .game-in-play .hand-phase-controls { flex-wrap: wrap; padding: 7px; margin: 0; gap: 7px; }
+  .game-in-play .hand-phase-label { flex: 1 1 100%; }
+  .game-in-play .hand-phase-next { flex: 1; width: 100%; margin: 0; }
+  .game-in-play .hand-list {
+    flex-wrap: wrap; justify-content: center;
+    align-content: flex-start;
+    overflow-y: auto; overflow-x: hidden;
+    gap: 9px 7px; padding: 8px 2px;
+    margin: 3px 0;
+  }
+  .game-in-play .hand-card { flex: 0 0 74px; width: 74px; height: 104px; }
+  .game-in-play .hand-actions { align-content: flex-start; }
+}
+/* 2カラム時は1ページスクロールを許容して、盤面が切れないようにする。 */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .game-in-play { height: auto; overflow: visible; }
+  .game-in-play .game-layout { grid-template-rows: auto auto; }
+  .game-in-play .field-panel { overflow: visible; }
+  .game-in-play .side-panel { overflow-y: visible; }
+  .game-in-play .hand-panel { overflow: visible; }
+  .game-in-play .board-grid { --cell-size: clamp(42px, 7.2vh, 70px); }
+}
+
+/* v0.15 : stronger board guidance, card focus, saved offline match. */
+.game-in-play .field-cell.valid-placement {
+  outline: 3px solid #f6cf7b;
+  outline-offset: -3px;
+  box-shadow: 0 0 0 2px #b4edc1, inset 0 0 20px #d5f1b13a;
+}
+.game-in-play .placement-target-label {
+  position: absolute; bottom: 2px; right: 2px; z-index: 9;
+  background: #f1d48b; color: #192d31; border-radius: 3px;
+  padding: 2px 4px; font-size: 9px; font-weight: 800;
+}
+.game-in-play .field-cell .castle-back {
+  display: block; position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #101e2a; border-radius: 5px;
+}
+.game-in-play .field-cell .castle-label {
+  z-index: 5; background: #081d24cc; color: #fff;
+  border: 1px solid #fff8; border-radius: 3px;
+  padding: 1px 3px; font-size: 10px;
+}
+.game-in-play .hand-card.discard-candidate {
+  border: 2px solid #f0a9ac;
+  box-shadow: 0 0 0 1px #f19a9b99;
+}
+.game-in-play .hand-card.discard-candidate:hover {
+  box-shadow: 0 0 0 2px #f8c1bf, 0 0 16px #e58085;
+}
+.game-in-play .focus-preview { display: flex; }
+.game-in-play .focus-image-button {
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  flex: 0 0 104px; min-width: 0;
+  padding: 0; border: none; background: transparent;
+  color: #ecd49c; cursor: zoom-in; font-size: 11px;
+}
+.game-in-play .focus-image-button img { width: 103px; height: 145px; max-width: 100%; }
+.game-in-play .focus-image-button:hover img { border-color: #f0cc86; }
+.game-in-play .movement-reference-wrapper { margin-top: 8px; }
+.game-in-play .movement-reference {
+  border: 1px solid #64888b; background: #12272f;
+  border-radius: 7px; padding: 8px; display: flex; flex-direction: column;
+  align-items: flex-start; gap: 5px;
+}
+.game-in-play .movement-reference > strong { color: #f2d6a0; font-size: 12px; }
+.game-in-play .movement-reference small { font-size: 11px; color: #b6d3d3; }
+/* カード元画像から実座標で抽出した移動範囲図。枠外切り抜きはしない。 */
+.game-in-play .movement-artwork {
+  display: flex; align-items: center; justify-content: center;
+  width: min(100%, 190px); min-height: 120px; height: auto;
+  padding: 9px; overflow: visible; border: 2px solid #9cb5b4;
+  border-radius: 7px; background: #1c343c;
+}
+.game-in-play .movement-artwork img {
+  display: block; width: auto; height: auto;
+  max-width: 100%; max-height: 170px;
+  border: 0; border-radius: 2px; object-fit: contain;
+  image-rendering: auto;
+}
+.game-in-play .movement-crop-fallback { font-size: 11px; color: #b6d3d3; }
+.game-in-play .equipment-gallery { margin-top: 11px; border-top: 1px solid #47636c; padding-top: 9px; }
+.game-in-play .equipment-gallery > strong { font-size: 12px; color: #f1d6a0; }
+.game-in-play .equipment-gallery-list { display: flex; gap: 7px; flex-wrap: wrap; padding-top: 6px; }
+.game-in-play .equipment-preview {
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  width: 79px; padding: 4px; border: 1px solid #688a89; border-radius: 6px;
+  color: #e8dbbb; background: #193137; cursor: pointer;
+}
+.game-in-play .equipment-preview img { width: 50px; height: 69px; object-fit: contain; }
+.game-in-play .equipment-preview span { font-size: 10px; line-height: 1.25; overflow-wrap: anywhere; }
+.game-in-play .equipment-preview.equipment-selected { border: 2px solid #f7d18e; }
+.card-zoom-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+  background: #040c11da; padding: 22px; cursor: zoom-out;
+}
+.card-zoom-dialog { display: flex; flex-direction: column; align-items: center; gap: 7px; position: relative; cursor: auto; }
+.card-zoom-dialog img { display: block; max-height: 83dvh; max-width: min(92vw, 540px); object-fit: contain; filter: drop-shadow(0 5px 18px #000c); }
+.card-zoom-dialog strong { color: #f1d69c; }
+.card-zoom-close { position: absolute; top: -16px; right: -22px; font-size: 26px; background: #ebc47c; color: #15303a; border-radius: 50%; width: 38px; height: 38px; border: 0; z-index: 1; cursor: pointer; }
+.equipment-handoff .mulligan-screen { max-width: 840px; margin: 12vh auto 0; }
+.equipment-handoff-card { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; }
+.equipment-handoff-card img { width: 110px; max-height: 150px; object-fit: contain; }
+@media (max-width: 540px) {
+  .game-in-play .movement-artwork { width: min(100%, 175px); }
+  .card-zoom-dialog img { max-width: 88vw; }
+}
+
+/* オンライン対戦モード */
+.online-lobby-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.online-lobby-header h2 { margin: 0; }
+.online-lobby { max-width: 760px; }
+.online-actions { margin: 20px 0; display: flex; }
+.online-join { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid #46616a; }
+.online-join input { background: #10262e; border: 1px solid #78949b; border-radius: 6px; padding: 10px 14px; color: #fff; font: inherit; font-size: 18px; letter-spacing: .13em; text-transform: uppercase; min-width: 180px; }
+.online-room-code { font-size: 28px; font-weight: 800; letter-spacing: .12em; color: #f0c96c; user-select: all; }
+.online-warning { border-left: 3px solid #ebbb63; background: #393328; padding: 14px; }
+.online-error { margin: 12px 0; border-left: 3px solid #f47575; padding: 10px; background: #462c32; color: #ffe5e5; }
+.online-waiting { background: #253c44; border: 1px solid #52707a; padding: 14px; border-radius: 7px; }
+.online-match-bar { color: #f9dfac; font-weight: 700; margin: 12px 0; padding: 10px 14px; background: #223f43; border-radius: 8px; border: 1px solid #546d68; }
+.online-lobby button:disabled { cursor: not-allowed; opacity: .55; }
+
+
+/* v0.17.0: ホーム画面 */
+.home-screen { position: relative; min-height: 100dvh; padding: clamp(16px, 3vw, 34px); overflow: hidden; background: radial-gradient(ellipse at 50% 22%, #2f4951 0%, #152d35 43%, #0e2028 100%); }
+.home-glow { position: absolute; pointer-events: none; inset: 0; background: radial-gradient(circle at 50% 39%, #c7984330, transparent 43%); }
+.home-topbar { position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.home-top-brand { font-size: clamp(11px, 1.8vw, 15px); letter-spacing: .22em; font-weight: 800; color: #eed5a1; }
+.home-top-brand span { padding: 4px 6px; border: 1px solid #69828a; border-radius: 4px; margin-left: 5px; font-size: .75em; }
+.home-topbar a { color: #d7e4e0; text-decoration: none; border: 1px solid #54747c; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.home-hero { position: relative; z-index: 1; display: flex; align-items: center; flex-direction: column; max-width: 800px; margin: clamp(25px, 5vh, 56px) auto 0; text-align: center; }
+.home-logo-frame { width: min(75vw, 400px); border: 1px solid #947f59; padding: 7px; background: #f8f4ec; box-shadow: 0 16px 55px #0008, 0 0 30px #c69b3f16; border-radius: 12px; }
+.home-logo-frame img { width: 100%; display: block; height: auto; border-radius: 6px; }
+.home-eyebrow { font-size: 11px; color: #f0ca8b; letter-spacing: .24em; margin: 22px 0 5px; }
+.home-hero h1 { font-size: clamp(29px, 5.1vw, 54px); letter-spacing: .095em; margin: 4px 0; color: #ffebc6; text-shadow: 0 4px 18px #0007; }
+.home-subtitle { font-size: clamp(13px, 2.3vw, 17px); color: #cddfdb; margin: 7px 0 24px; }
+.home-game-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: min(100%, 700px); gap: 14px; text-align: left; }
+.home-play-button { min-width: 0; min-height: 100px; display: flex; align-items: center; gap: 14px; padding: 18px; cursor: pointer; border-radius: 12px; transition: transform .15s, filter .15s; }
+.home-play-button:hover { transform: translateY(-3px); filter: brightness(1.08); }
+.home-play-online { border: 2px solid #e0bc6e; background: linear-gradient(130deg,#f3cc82,#dbae59); color: #20272a; }
+.home-play-local { border: 2px solid #67838b; background: linear-gradient(130deg,#355965,#203f4b); color: #f4f7ef; }
+.home-play-button > span:nth-child(2) { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.home-play-button strong { font-size: clamp(16px, 2.3vw, 21px); }
+.home-play-button small { font-size: 11px; opacity: .85; }
+.home-play-symbol { width: 41px; height: 41px; border: 1px solid currentColor; border-radius: 9px; display: grid; place-items: center; font-size: 22px; flex: 0 0 41px; }
+.home-play-arrow { font-size: 24px; }
+.home-links { position: relative; z-index: 1; width: min(100%, 760px); margin: 36px auto 0; border-top: 1px solid #547078; padding-top: 20px; }
+.home-links h2 { color: #d7e4e0; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: .09em; margin: 0 0 14px; }
+.home-link-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.home-link-list a { min-width: 0; min-height: 49px; display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; text-decoration: none; color: #e8eeea; border: 1px solid #476a73; background: #233f48ba; border-radius: 8px; font-size: 12px; padding: 9px 6px; }
+.home-link-list a:hover, .home-topbar a:hover { color: #f8d596; border-color: #c6a56a; }
+.home-link-list a span { font-size: 18px; }
+.home-footer { position: relative; margin: 35px auto 0; max-width: 1120px; display: flex; justify-content: space-between; color: #92adaf; font-size: 10px; }
+.home-screen button:focus-visible, .home-screen a:focus-visible { outline: 3px solid #ffdb83; outline-offset: 3px; }
+
+/* v0.17.0: 小さな盤面でもATK/DEFを2段で表示 */
+.game-in-play .field-cell .stats {
+  display: flex; flex-direction: column; align-items: flex-start;
+  bottom: 1px; left: 1px; gap: 1px;
+  max-width: calc(100% - 2px);
+  padding: 2px 3px; border: 1px solid #61778380;
+  font-size: clamp(7px, .68vw, 9px); font-weight: 800;
+  line-height: 1.15; white-space: nowrap; overflow: hidden;
+}
+.game-in-play .field-cell .stats span { display: block; }
+.game-in-play .opponent-hand-pill { display: inline-flex; gap: 5px; color: #f5dca6; font-size: 12px; align-items: center; border: 1px solid #8b7957; border-radius: 6px; padding: 3px 8px; }
+.game-in-play .opponent-hand-pill strong { color: #ffe4a4; font-size: 14px; }
+.game-in-play .opponent-hand-summary { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px 10px; border-radius: 6px; padding: 8px; margin-top: 7px; background: #2b4650; color: #c6d5d3; font-size: 11px; }
+.game-in-play .opponent-hand-summary strong { color: #f1ce88; font-size: 23px; }
+.game-in-play .opponent-hand-summary small { font-size: 11px; margin-left: 3px; }
+
+/* v0.17.0: モバイル用。盤面→手札→詳細の順で、横にはみ出させない */
+@media (max-width: 900px) {
+  .game-app { max-width: 100%; }
+  .game-in-play .game-layout { grid-template-areas: "field" "hand" "side"; grid-template-columns: minmax(0,1fr); grid-template-rows: auto; gap: 12px; }
+  .game-in-play .field-panel, .game-in-play .hand-panel, .game-in-play .side-panel { min-width: 0; overflow: visible; }
+  .game-in-play .board-grid { --cell-size: min(16.6vw, 72px); max-width: 100%; }
+  .game-in-play .side-panel { padding: 0; }
+  .game-in-play .hand-list { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; overscroll-behavior-x: contain; justify-content: flex-start; padding: 5px 2px 9px; }
+  .game-in-play .hand-card { flex: 0 0 76px; width: 76px; height: 110px; }
+  .game-in-play .focus-description { overflow-wrap: anywhere; }
+  .game-in-play .status-bar { flex-wrap: wrap; }
+  .game-in-play .status-bar .status-deck { margin-left: 0; }
+}
+@media (max-width: 540px) {
+  .home-game-actions { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .home-play-button { min-height: 76px; padding: 13px; }
+  .home-play-symbol { width: 36px; height: 36px; flex-basis: 36px; }
+  .home-logo-frame { width: min(73vw, 320px); }
+  .home-link-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .home-links { margin-top: 24px; }
+  .home-hero { margin-top: 25px; }
+  .home-subtitle { margin-bottom: 18px; }
+  .game-in-play { padding: 8px; }
+  .game-in-play .field-panel, .game-in-play .hand-panel, .game-in-play .side-panel .panel-card { padding: 8px; }
+  .game-in-play .board-grid { --cell-size: min(17vw, 65px); gap: 3px; }
+  .game-in-play .field-cell .stats { font-size: 7px; padding: 1px 2px; }
+  .game-in-play .status-bar { padding: 9px; gap: 6px 9px; }
+  .game-in-play .status-bar span { font-size: 11px; }
+  .game-in-play .opponent-hand-pill strong { font-size: 13px; }
+  .game-in-play .hand-phase-controls { flex-wrap: wrap; }
+  .game-in-play .hand-phase-next { width: 100%; margin: 0; min-height: 44px; }
+  .game-in-play .hand-phase-label { flex: 1 1 100%; }
+  .game-in-play .hand-card { flex: 0 0 76px; width: 76px; height: 109px; }
+  .game-in-play .focus-preview { gap: 8px; }
+  .game-in-play .focus-preview img { width: 87px; height: 127px; }
+  .game-in-play .focus-image-button img { width: 87px; height: 127px; }
+  .game-in-play .panel-title { flex-wrap: wrap; gap: 4px; }
+  .deck-setup .deck-options { gap: 6px; }
+  .deck-option img { height: 105px; }
+  .online-join { flex-direction: column; }
+  .online-join input, .online-join button { width: 100%; }
+  .online-join input { min-width: 0; font-size: 16px; }
+  .game-header { flex-wrap: wrap; }
+  .game-in-play .game-header-actions { width: 100%; justify-content: flex-end; }
+  .mulligan-screen { max-width: 100%; }
+  .mulligan-hand { justify-content: center; gap: 6px; }
+  .mulligan-card { width: clamp(74px, 22vw, 90px); height: auto; aspect-ratio: 104 / 147; }
+  .card-zoom-dialog img { max-height: 75dvh; max-width: 86vw; }
+  .card-zoom-close { right: -7px; top: -25px; width: 44px; height: 44px; }
+  .home-footer { flex-wrap: wrap; gap: 8px; }
+}
+@media (pointer: coarse) {
+  button, .home-link-list a { touch-action: manipulation; }
+  .game-in-play .hand-card, .game-in-play .phase-next, .online-lobby button { min-height: 44px; }
+}
