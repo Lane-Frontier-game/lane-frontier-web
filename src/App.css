@@ -550,7 +550,7 @@
 .home-play-arrow { font-size: 24px; }
 .home-links { position: relative; z-index: 1; width: min(100%, 760px); margin: 36px auto 0; border-top: 1px solid #547078; padding-top: 20px; }
 .home-links h2 { color: #d7e4e0; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: .09em; margin: 0 0 14px; }
-.home-link-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.home-link-list { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 9px; }
 .home-link-list a { min-width: 0; min-height: 49px; display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; text-decoration: none; color: #e8eeea; border: 1px solid #476a73; background: #233f48ba; border-radius: 8px; font-size: 12px; padding: 9px 6px; }
 .home-link-list a:hover, .home-topbar a:hover { color: #f8d596; border-color: #c6a56a; }
 .home-link-list a span { font-size: 18px; }
@@ -585,6 +585,9 @@
   .game-in-play .focus-description { overflow-wrap: anywhere; }
   .game-in-play .status-bar { flex-wrap: wrap; }
   .game-in-play .status-bar .status-deck { margin-left: 0; }
+}
+@media (min-width: 541px) and (max-width: 800px) {
+  .home-link-list { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 @media (max-width: 540px) {
   .home-game-actions { grid-template-columns: minmax(0,1fr); gap: 10px; }

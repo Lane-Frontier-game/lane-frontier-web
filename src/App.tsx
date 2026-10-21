@@ -20,7 +20,7 @@ import { useOnlineRoom } from './online/useOnlineRoom'
 import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.17.0 画面・スマホ対応版'
+const BUILD_LABEL = 'v0.17.1 ルールリンク追加版'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -441,6 +441,7 @@ function App() {
         <h2>公式サイト・お問い合わせ</h2>
         <div className="home-link-list">
           <a href="https://lane-frontier-game.github.io/lane-frontier/" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">⌂</span> 公式HP ↗</a>
+          <a href="https://lane-frontier-game.github.io/lane-frontier/rules.html" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▤</span> ルールを見る ↗</a>
           <a href="https://x.com/lean_frontier" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">𝕏</span> 公式X ↗</a>
           <a href="https://line.me/R/ti/p/@273joulf" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">●</span> 公式LINE ↗</a>
           <a href="mailto:leanfrontier.official@gmail.com"><span aria-hidden="true">✉</span> メールでお問い合わせ ↗</a>
