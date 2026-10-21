@@ -523,3 +523,108 @@
 .online-waiting { background: #253c44; border: 1px solid #52707a; padding: 14px; border-radius: 7px; }
 .online-match-bar { color: #f9dfac; font-weight: 700; margin: 12px 0; padding: 10px 14px; background: #223f43; border-radius: 8px; border: 1px solid #546d68; }
 .online-lobby button:disabled { cursor: not-allowed; opacity: .55; }
+
+
+/* v0.17.0: ホーム画面 */
+.home-screen { position: relative; min-height: 100dvh; padding: clamp(16px, 3vw, 34px); overflow: hidden; background: radial-gradient(ellipse at 50% 22%, #2f4951 0%, #152d35 43%, #0e2028 100%); }
+.home-glow { position: absolute; pointer-events: none; inset: 0; background: radial-gradient(circle at 50% 39%, #c7984330, transparent 43%); }
+.home-topbar { position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.home-top-brand { font-size: clamp(11px, 1.8vw, 15px); letter-spacing: .22em; font-weight: 800; color: #eed5a1; }
+.home-top-brand span { padding: 4px 6px; border: 1px solid #69828a; border-radius: 4px; margin-left: 5px; font-size: .75em; }
+.home-topbar a { color: #d7e4e0; text-decoration: none; border: 1px solid #54747c; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.home-hero { position: relative; z-index: 1; display: flex; align-items: center; flex-direction: column; max-width: 800px; margin: clamp(25px, 5vh, 56px) auto 0; text-align: center; }
+.home-logo-frame { width: min(75vw, 400px); border: 1px solid #947f59; padding: 7px; background: #f8f4ec; box-shadow: 0 16px 55px #0008, 0 0 30px #c69b3f16; border-radius: 12px; }
+.home-logo-frame img { width: 100%; display: block; height: auto; border-radius: 6px; }
+.home-eyebrow { font-size: 11px; color: #f0ca8b; letter-spacing: .24em; margin: 22px 0 5px; }
+.home-hero h1 { font-size: clamp(29px, 5.1vw, 54px); letter-spacing: .095em; margin: 4px 0; color: #ffebc6; text-shadow: 0 4px 18px #0007; }
+.home-subtitle { font-size: clamp(13px, 2.3vw, 17px); color: #cddfdb; margin: 7px 0 24px; }
+.home-game-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: min(100%, 700px); gap: 14px; text-align: left; }
+.home-play-button { min-width: 0; min-height: 100px; display: flex; align-items: center; gap: 14px; padding: 18px; cursor: pointer; border-radius: 12px; transition: transform .15s, filter .15s; }
+.home-play-button:hover { transform: translateY(-3px); filter: brightness(1.08); }
+.home-play-online { border: 2px solid #e0bc6e; background: linear-gradient(130deg,#f3cc82,#dbae59); color: #20272a; }
+.home-play-local { border: 2px solid #67838b; background: linear-gradient(130deg,#355965,#203f4b); color: #f4f7ef; }
+.home-play-button > span:nth-child(2) { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.home-play-button strong { font-size: clamp(16px, 2.3vw, 21px); }
+.home-play-button small { font-size: 11px; opacity: .85; }
+.home-play-symbol { width: 41px; height: 41px; border: 1px solid currentColor; border-radius: 9px; display: grid; place-items: center; font-size: 22px; flex: 0 0 41px; }
+.home-play-arrow { font-size: 24px; }
+.home-links { position: relative; z-index: 1; width: min(100%, 760px); margin: 36px auto 0; border-top: 1px solid #547078; padding-top: 20px; }
+.home-links h2 { color: #d7e4e0; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: .09em; margin: 0 0 14px; }
+.home-link-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.home-link-list a { min-width: 0; min-height: 49px; display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; text-decoration: none; color: #e8eeea; border: 1px solid #476a73; background: #233f48ba; border-radius: 8px; font-size: 12px; padding: 9px 6px; }
+.home-link-list a:hover, .home-topbar a:hover { color: #f8d596; border-color: #c6a56a; }
+.home-link-list a span { font-size: 18px; }
+.home-footer { position: relative; margin: 35px auto 0; max-width: 1120px; display: flex; justify-content: space-between; color: #92adaf; font-size: 10px; }
+.home-screen button:focus-visible, .home-screen a:focus-visible { outline: 3px solid #ffdb83; outline-offset: 3px; }
+
+/* v0.17.0: 小さな盤面でもATK/DEFを2段で表示 */
+.game-in-play .field-cell .stats {
+  display: flex; flex-direction: column; align-items: flex-start;
+  bottom: 1px; left: 1px; gap: 1px;
+  max-width: calc(100% - 2px);
+  padding: 2px 3px; border: 1px solid #61778380;
+  font-size: clamp(7px, .68vw, 9px); font-weight: 800;
+  line-height: 1.15; white-space: nowrap; overflow: hidden;
+}
+.game-in-play .field-cell .stats span { display: block; }
+.game-in-play .opponent-hand-pill { display: inline-flex; gap: 5px; color: #f5dca6; font-size: 12px; align-items: center; border: 1px solid #8b7957; border-radius: 6px; padding: 3px 8px; }
+.game-in-play .opponent-hand-pill strong { color: #ffe4a4; font-size: 14px; }
+.game-in-play .opponent-hand-summary { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px 10px; border-radius: 6px; padding: 8px; margin-top: 7px; background: #2b4650; color: #c6d5d3; font-size: 11px; }
+.game-in-play .opponent-hand-summary strong { color: #f1ce88; font-size: 23px; }
+.game-in-play .opponent-hand-summary small { font-size: 11px; margin-left: 3px; }
+
+/* v0.17.0: モバイル用。盤面→手札→詳細の順で、横にはみ出させない */
+@media (max-width: 900px) {
+  .game-app { max-width: 100%; }
+  .game-in-play .game-layout { grid-template-areas: "field" "hand" "side"; grid-template-columns: minmax(0,1fr); grid-template-rows: auto; gap: 12px; }
+  .game-in-play .field-panel, .game-in-play .hand-panel, .game-in-play .side-panel { min-width: 0; overflow: visible; }
+  .game-in-play .board-grid { --cell-size: min(16.6vw, 72px); max-width: 100%; }
+  .game-in-play .side-panel { padding: 0; }
+  .game-in-play .hand-list { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; overscroll-behavior-x: contain; justify-content: flex-start; padding: 5px 2px 9px; }
+  .game-in-play .hand-card { flex: 0 0 76px; width: 76px; height: 110px; }
+  .game-in-play .focus-description { overflow-wrap: anywhere; }
+  .game-in-play .status-bar { flex-wrap: wrap; }
+  .game-in-play .status-bar .status-deck { margin-left: 0; }
+}
+@media (max-width: 540px) {
+  .home-game-actions { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .home-play-button { min-height: 76px; padding: 13px; }
+  .home-play-symbol { width: 36px; height: 36px; flex-basis: 36px; }
+  .home-logo-frame { width: min(73vw, 320px); }
+  .home-link-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .home-links { margin-top: 24px; }
+  .home-hero { margin-top: 25px; }
+  .home-subtitle { margin-bottom: 18px; }
+  .game-in-play { padding: 8px; }
+  .game-in-play .field-panel, .game-in-play .hand-panel, .game-in-play .side-panel .panel-card { padding: 8px; }
+  .game-in-play .board-grid { --cell-size: min(17vw, 65px); gap: 3px; }
+  .game-in-play .field-cell .stats { font-size: 7px; padding: 1px 2px; }
+  .game-in-play .status-bar { padding: 9px; gap: 6px 9px; }
+  .game-in-play .status-bar span { font-size: 11px; }
+  .game-in-play .opponent-hand-pill strong { font-size: 13px; }
+  .game-in-play .hand-phase-controls { flex-wrap: wrap; }
+  .game-in-play .hand-phase-next { width: 100%; margin: 0; min-height: 44px; }
+  .game-in-play .hand-phase-label { flex: 1 1 100%; }
+  .game-in-play .hand-card { flex: 0 0 76px; width: 76px; height: 109px; }
+  .game-in-play .focus-preview { gap: 8px; }
+  .game-in-play .focus-preview img { width: 87px; height: 127px; }
+  .game-in-play .focus-image-button img { width: 87px; height: 127px; }
+  .game-in-play .panel-title { flex-wrap: wrap; gap: 4px; }
+  .deck-setup .deck-options { gap: 6px; }
+  .deck-option img { height: 105px; }
+  .online-join { flex-direction: column; }
+  .online-join input, .online-join button { width: 100%; }
+  .online-join input { min-width: 0; font-size: 16px; }
+  .game-header { flex-wrap: wrap; }
+  .game-in-play .game-header-actions { width: 100%; justify-content: flex-end; }
+  .mulligan-screen { max-width: 100%; }
+  .mulligan-hand { justify-content: center; gap: 6px; }
+  .mulligan-card { width: clamp(74px, 22vw, 90px); height: auto; aspect-ratio: 104 / 147; }
+  .card-zoom-dialog img { max-height: 75dvh; max-width: 86vw; }
+  .card-zoom-close { right: -7px; top: -25px; width: 44px; height: 44px; }
+  .home-footer { flex-wrap: wrap; gap: 8px; }
+}
+@media (pointer: coarse) {
+  button, .home-link-list a { touch-action: manipulation; }
+  .game-in-play .hand-card, .game-in-play .phase-next, .online-lobby button { min-height: 44px; }
+}

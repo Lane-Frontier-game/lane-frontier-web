@@ -4,7 +4,7 @@ import { equipMonsterInCell } from './game/equipment'
 import { castMagic, magicTargetIndices } from './game/magic'
 import { offerOgreAdvance, offerSummonEffect, resolveOptionalMonsterEffect, resolvePrakilorusSummonBattle } from './game/monsterEffects'
 import {
-  adjacent, attackAt, autoEquip, canMoveNow, cardImage, cardInfo, cardName,
+  adjacent, attackAt, canMoveNow, cardImage, cardInfo, cardName,
   COLS, defenseAt, drawCards, legalMoves, moveAndBattle, offsetTarget,
   otherPlayer, ownElementTerritoryCount, territoryCount, validDestination,
 } from './game/logic'
@@ -13,15 +13,14 @@ import { DECK_ELEMENTS, createGameWithDecks } from './game/decks'
 import { mulligan } from './game/setup'
 import { placementTargets } from './game/placementTargets'
 import { switchTurn } from './game/phaseFlow'
-import { MovementArtwork } from './components/MovementArtwork'
 import { visibleBoardIndices, visibleCoordinate, shouldRotateCard } from './game/view'
 import type { DeckElement } from './game/decks'
-import type { CardInstance, FieldCell, GameState, PlayerId } from './game/types'
+import type { CardInstance, GameState, PlayerId } from './game/types'
 import { useOnlineRoom } from './online/useOnlineRoom'
 import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.16.1 Firebase接続版'
+const BUILD_LABEL = 'v0.17.0 画面・スマホ対応版'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -38,6 +37,7 @@ const LEGACY_SAVE_KEY = 'lane-frontier-local-v0.15'
 
 function App() {
   const [game, setGameLocal] = useState<GameState>(createInitialGameState)
+  const [screen, setScreen] = useState<'home' | 'local' | 'online'>('home')
   const [onlineMode, setOnlineMode] = useState(false)
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const online = useOnlineRoom()
@@ -51,7 +51,6 @@ function App() {
   const [inspect, setInspect] = useState<number | null>(null)
   const [inspectedEquipmentId, setInspectedEquipmentId] = useState<string | null>(null)
   const [zoomCardId, setZoomCardId] = useState<string | null>(null)
-  const [testRemove, setTestRemove] = useState(false)
   const [message, setMessage] = useState('手札を選ぶか、フェイズを進めてください')
 
   const owner = onlineMode && online.session ? online.session.seat : game.activePlayer
@@ -179,19 +178,6 @@ function App() {
     setMessage(result.message)
   }
 
-  function discardCard() {
-    if (onlineMode || game.winner || pendingEquip || game.pendingEffect || !selectedCard) return
-    const removed = selectedCard
-    setGame(prev => {
-      const p = prev.players[prev.activePlayer]
-      return { ...prev, players: { ...prev.players, [prev.activePlayer]: {
-        ...p, hand: p.hand.filter(c => c.instanceId !== removed.instanceId), graveyard: [...p.graveyard, removed],
-      } } }
-    })
-    setSelectedId(null)
-    setMessage(`${cardName(removed.cardId)}を墓地へ送りました（テスト用）`)
-  }
-
   function playCardAt(index: number, card: CardInstance) {
     if (!isMyTurn || online.busy) return
     if (game.winner || game.pendingEffect || pendingEquip) { setMessage('まず選択待ちの効果を解決してください'); return }
@@ -289,39 +275,6 @@ function App() {
     setMessage(placementMessage)
   }
 
-  function removeCellForTesting(index: number) {
-    const cell = game.board[index]
-    let removed: CardInstance | null = null
-    let updated: FieldCell = cell
-    if (cell.monster) {
-      removed = cell.monster.card
-      updated = { ...cell, monster: null }
-    } else if (cell.equipments.length > 0) {
-      removed = cell.equipments[cell.equipments.length - 1]
-      updated = autoEquip({ ...cell, equipments: cell.equipments.slice(0, -1) })
-    } else if (cell.territory) {
-      removed = cell.territory
-      updated = { ...cell, territory: null }
-    }
-    if (!removed) return
-    const p = game.players[removed.owner]
-    let next: GameState = {
-      ...game,
-      board: game.board.map((c, i) => i === index ? updated : c),
-      players: { ...game.players, [removed.owner]: {
-        ...p, graveyard: [...p.graveyard, removed],
-      } },
-    }
-    // For test-only removal, changing to the only remaining equipment counts as equipping.
-    const newlyEquipped = updated.monster?.equippedId
-    if (newlyEquipped && newlyEquipped !== cell.monster?.equippedId) {
-      const equipment = updated.equipments.find(e => e.instanceId === newlyEquipped)
-      if (equipment?.cardId === 'LF-025') next = drawCards(next, updated.monster!.card.owner, 1)
-    }
-    setGame(next)
-    setMessage(`${cardName(removed.cardId)}を墓地へ送りました（テスト操作）`)
-  }
-
   function handleCellClick(index: number) {
     if (onlineMode && (!isMyTurn || online.busy)) {
       setInspect(index)
@@ -333,7 +286,6 @@ function App() {
     if (pendingEquip) { setMessage('まず使用する装備を1枚選んでください'); return }
     if (game.pendingEffect) { setMessage('まず右側でモンスターの任意効果を選んでください'); return }
     if (selectedCard) { playCardAt(index, selectedCard); return }
-    if (testRemove) { removeCellForTesting(index); return }
     const cell = game.board[index]
     setInspect(index)
     setInspectedEquipmentId(null)
@@ -394,219 +346,6 @@ function App() {
     setMessage(next.winner ? `${displayPlayer(next.winner)}の勝利！ ${next.winReason}` : `${PHASE_LABELS[next.phase]}フェイズです`)
   }
 
-  function loadDemo(kind: 'battle' | 'tie' | 'castle') {
-    const next = createGameWithDecks(deckChoices.player1 ?? '火', deckChoices.player2 ?? '風')
-    next.turn = 5
-    next.phase = 'move'
-    const heroId = kind === 'battle' ? 'LF-002' : 'LF-001'
-    const enemyId = kind === 'tie' ? 'LF-012' : 'LF-010'
-    const hero = { instanceId: 'demo-hero', cardId: heroId, owner: 'player1' as const }
-    const foe = { instanceId: 'demo-foe', cardId: enemyId, owner: 'player2' as const }
-    const from = kind === 'castle' ? 7 : 22
-    const ownTerritory = { instanceId: 'demo-territory1', cardId: 'LF-009', owner: 'player1' as const }
-    next.board[from] = { ...next.board[from], territory: ownTerritory, monster: {
-      card: hero, summonedTurn: 1, equippedId: null,
-    } }
-    if (kind !== 'castle') {
-      next.board[17] = {
-        ...next.board[17],
-        territory: { instanceId: 'demo-territory2', cardId: 'LF-018', owner: 'player2' },
-        monster: { card: foe, summonedTurn: 1, equippedId: null },
-      }
-    }
-    setGame(next)
-    resetSelection()
-    setInspect(from)
-    setTestRemove(false)
-    setMessage(kind === 'castle' ? '城への到達テスト：モンスターをクリック → 相手の城をクリック' :
-      '戦闘テスト：下側のモンスターをクリック → 黄色い相手マスをクリック')
-  }
-
-  function loadMagicDemo(kind: 'rush' | 'wind' | 'ocean' | 'current') {
-    const next = createGameWithDecks(deckChoices.player1 ?? '火', deckChoices.player2 ?? '風')
-    const cardId = { rush: 'LF-006', wind: 'LF-015', ocean: 'LF-023', current: 'LF-024' }[kind]
-    const elementTerritoryId = kind === 'rush' ? 'LF-009' : kind === 'wind' ? 'LF-018' : 'LF-027'
-    const owner = 'player1' as const
-    const indexes = kind === 'rush' || kind === 'wind' ? [22, 17, 21, 16, 12] : [22, 17, 12]
-    for (const i of indexes) {
-      next.board[i] = { ...next.board[i], territory: {
-        instanceId: `magic-territory-${i}`, cardId: elementTerritoryId, owner,
-      } }
-    }
-    next.turn = 5
-    next.phase = 'main'
-    next.activePlayer = owner
-    next.players.player1.hand = [
-      { instanceId: 'spell-demo', cardId, owner },
-      { instanceId: 'magic-discard', cardId: 'LF-001', owner },
-      { instanceId: 'magic-discard2', cardId: 'LF-027', owner },
-    ]
-    if (kind === 'rush' || kind === 'wind') {
-      next.board[22].monster = {
-        card: { instanceId: 'magic-hero', cardId: 'LF-001', owner },
-        summonedTurn: kind === 'rush' ? 5 : 1, equippedId: null,
-      }
-    }
-    if (kind === 'current') {
-      next.board[17].monster = {
-        card: { instanceId: 'magic-enemy', cardId: 'LF-010', owner: 'player2' },
-        summonedTurn: 1, equippedId: null,
-      }
-    }
-    setGame(next)
-    resetSelection()
-    setInspect(kind === 'current' ? 17 : 22)
-    setTestRemove(false)
-    setMessage(`マジック体験：手札の「${cardName(cardId)}」を選択して使ってください`)
-  }
-
-  function loadMonsterDemo(kind: 'ogre' | 'centaur' | 'mermaid' | 'prakilorus') {
-    const next = createGameWithDecks(deckChoices.player1 ?? '火', deckChoices.player2 ?? '風')
-    const owner: PlayerId = 'player1'
-    const cardId = {
-      ogre: 'LF-005', centaur: 'LF-013', mermaid: 'LF-020', prakilorus: 'LF-022',
-    }[kind]
-    const landId = kind === 'ogre' ? 'LF-009' : kind === 'centaur' ? 'LF-017' : 'LF-026'
-    next.turn = 6
-    next.phase = kind === 'ogre' ? 'move' : 'main'
-    next.activePlayer = owner
-    next.pendingEffect = null
-    // Required 7 lands are supplied so the test always works without waiting for draws.
-    for (const i of [22, 21, 20, 17, 16, 12, 11, 23]) {
-      next.board[i] = { ...next.board[i], territory: {
-        instanceId: `monster-land-${i}`, cardId: landId, owner,
-      } }
-    }
-    next.players.player1.hand = [
-      { instanceId: 'monster-demo-hand', cardId, owner },
-      { instanceId: 'monster-demo-extra', cardId: 'LF-009', owner },
-    ]
-    if (kind === 'ogre') {
-      next.board[22].monster = { card: { instanceId: 'monster-demo-ogre', cardId, owner }, summonedTurn: 1, equippedId: null }
-      next.board[17].monster = { card: { instanceId: 'monster-demo-defender', cardId: 'LF-010', owner: 'player2' }, summonedTurn: 1, equippedId: null }
-    } else if (kind === 'prakilorus') {
-      next.board[22].monster = { card: { instanceId: 'monster-demo-defender', cardId: 'LF-010', owner: 'player2' }, summonedTurn: 1, equippedId: null }
-    }
-    setGame(next)
-    resetSelection()
-    setInspect(22)
-    setTestRemove(false)
-    setMessage(kind === 'ogre'
-      ? 'オーガ体験：22マスのオーガを選び、17マスの敵を攻撃 → 右側で前進を選択'
-      : `モンスター体験：手札の「${cardName(cardId)}」を選び、下側22マスの領土へ召喚`)
-  }
-
-  function loadEquipmentDemo(kind: 'carry' | 'drop' | 'borrow' | 'choose' | 'replace') {
-    const next = createGameWithDecks(deckChoices.player1 ?? '火', deckChoices.player2 ?? '風')
-    next.turn = 6
-    next.phase = 'move'
-    next.activePlayer = kind === 'borrow' ? 'player2' : 'player1'
-    next.pendingEffect = null
-    const land = (i: number, id: string, who: PlayerId) => {
-      next.board[i] = { ...next.board[i], territory: {
-        instanceId: `equip-demo-land-${i}`, cardId: id, owner: who,
-      } }
-    }
-    const gear = (id: string, who: PlayerId, suffix: string): CardInstance => ({
-      instanceId: `equip-demo-${suffix}`, cardId: id, owner: who,
-    })
-    if (kind === 'borrow') {
-      land(12, 'LF-018', 'player2')
-      land(17, 'LF-009', 'player1')
-      next.board[12].monster = { card: gear('LF-010', 'player2', 'visitor'), summonedTurn: 1, equippedId: null }
-      next.board[17].equipments = [gear('LF-007', 'player1', 'borrow-axe')]
-    } else {
-      land(22, 'LF-009', 'player1')
-      land(17, kind === 'drop' ? 'LF-018' : 'LF-009', kind === 'drop' ? 'player2' : 'player1')
-      const axe = gear('LF-007', kind === 'choose' ? 'player2' : 'player1', 'axe')
-      const spear = gear('LF-025', 'player1', 'spear')
-      next.board[22].monster = {
-        card: gear('LF-001', 'player1', 'hero'), summonedTurn: 1,
-        equippedId: kind === 'choose' ? null : axe.instanceId,
-      }
-      next.board[22].equipments = kind === 'choose' || kind === 'replace' ? [axe, spear] : [axe]
-      if (kind === 'drop') {
-        next.board[17].monster = {
-          card: gear('LF-014', 'player2', 'defender'), summonedTurn: 1, equippedId: null,
-        }
-      }
-    }
-    setGame(next)
-    resetSelection()
-    setInspect(kind === 'borrow' ? 12 : 22)
-    setTestRemove(false)
-    setMessage({
-      carry: '装備テスト：22マスのサラマンダーを選択し、17マスへ移動。斧も一緒に移動します。',
-      drop: '装備テスト：22マスから17マスのグリフォンに攻撃。相討ち後、斧は17マスに残ります。',
-      borrow: '装備テスト：プレイヤー2のアルミラージ（12マス）を17マスへ移動。相手所有の斧を自動使用します。',
-      choose: '装備テスト：右側で使用する装備を選択。相手所有の斧も選べます。',
-      replace: '装備テスト：斧使用中（ATK+2）。同じマスに槍があっても装備は切り替わりません。',
-    }[kind])
-  }
-
-  function loadCombinationDemo(kind: 'stack' | 'windBattle' | 'currentBattle' | 'fallenSpear') {
-    const next = createGameWithDecks(deckChoices.player1 ?? '火', deckChoices.player2 ?? '風')
-    next.turn = 6
-    next.phase = kind === 'windBattle' || kind === 'currentBattle' ? 'main' : 'move'
-    next.activePlayer = 'player1'
-    next.pendingEffect = null
-    const piece = (id: string, who: PlayerId, suffix: string): CardInstance => ({
-      instanceId: `combo-${kind}-${suffix}`, cardId: id, owner: who,
-    })
-    const land = (index: number, id: string, who: PlayerId) => {
-      next.board[index] = { ...next.board[index], territory: piece(id, who, `land-${index}`) }
-    }
-    const monster = (index: number, id: string, who: PlayerId) => {
-      next.board[index].monster = { card: piece(id, who, `monster-${index}`), summonedTurn: 1, equippedId: null }
-    }
-    const wear = (index: number, equipmentId: string, who: PlayerId) => {
-      const gear = piece(equipmentId, who, `gear-${index}`)
-      next.board[index].equipments.push(gear)
-      next.board[index].monster!.equippedId = gear.instanceId
-    }
-    let focus = 22
-    let instructions = ''
-    if (kind === 'stack') {
-      // Goblin gains +1 on enemy land, +2 from axe and +1 from an adjacent Treant.
-      // Defender gets +1 DEF from its own Treant: 7 ATK against 5 DEF.
-      land(17, 'LF-018', 'player2'); land(12, 'LF-018', 'player2')
-      land(11, 'LF-009', 'player1'); land(13, 'LF-018', 'player2')
-      monster(17, 'LF-003', 'player1'); wear(17, 'LF-007', 'player1')
-      monster(11, 'LF-012', 'player1'); monster(13, 'LF-012', 'player2')
-      monster(12, 'LF-014', 'player2')
-      focus = 17
-      instructions = '複合テスト：ゴブリンを選択 → 1マス前のグリフォンと戦闘。敵領土・斧・味方トレントと守備側トレントの効果を同時に確認します。'
-    } else if (kind === 'windBattle') {
-      // Wind can move a Centaur straight ahead even though the printed movement omits 2.
-      for (const index of [22, 21, 20, 16, 23]) land(index, 'LF-018', 'player1')
-      land(17, 'LF-018', 'player2')
-      monster(22, 'LF-013', 'player1'); wear(22, 'LF-007', 'player1')
-      monster(17, 'LF-014', 'player2')
-      next.players.player1.hand = [piece('LF-015', 'player1', 'spell')]
-      instructions = '複合テスト：手札の追い風を選択 → ケンタウロスをクリック。斧を持って前進・戦闘し、通常移動が禁止されるか確認します。'
-    } else if (kind === 'currentBattle') {
-      // The caster's magic forces an enemy to attack a friendly monster.
-      for (const index of [22, 17, 12]) land(index, 'LF-027', 'player1')
-      monster(17, 'LF-010', 'player2'); wear(17, 'LF-007', 'player1')
-      monster(12, 'LF-019', 'player1')
-      next.players.player1.hand = [piece('LF-024', 'player1', 'spell')]
-      focus = 17
-      instructions = '複合テスト：手札の激流を選択 → 斧を装備した敵アルミラージをクリック。装備ごと後退し、移動先で戦闘します。'
-    } else {
-      // The attacking Salamander falls, its spear is picked up by the defender.
-      // LF-025 must draw for player2, the surviving new wearer.
-      land(22, 'LF-009', 'player1'); land(17, 'LF-018', 'player2')
-      monster(22, 'LF-001', 'player1'); wear(22, 'LF-025', 'player1')
-      monster(17, 'LF-014', 'player2')
-      instructions = '複合テスト：サラマンダーを選択 → グリフォンへ攻撃。敗北後、グリフォンが槍を拾いプレイヤー2が1枚引きます。'
-    }
-    setGame(next)
-    resetSelection()
-    setInspect(focus)
-    setTestRemove(false)
-    setMessage(instructions)
-  }
-
   function newGame() {
     if (onlineMode) return
     const first = deckChoices.player1
@@ -617,7 +356,6 @@ function App() {
     setMulliganSelected([])
     resetSelection()
     setInspect(null)
-    setTestRemove(false)
     setMessage(`${first}デッキ 対 ${second}デッキ：新しい対戦を開始しました`)
   }
 
@@ -630,7 +368,6 @@ function App() {
     setGame(createInitialGameState())
     resetSelection()
     setInspect(null)
-    setTestRemove(false)
     setMessage('使うデッキを選んでください')
   }
 
@@ -644,8 +381,73 @@ function App() {
     setMulliganSelected([])
     resetSelection()
     setInspect(null)
-    setTestRemove(false)
     setMessage(`${first}デッキ 対 ${second}デッキ：対戦開始！`)
+  }
+
+  function goHome() {
+    online.leave()
+    setOnlineMode(false)
+    setScreen('home')
+    setStarted(false)
+    setGameLocal(createInitialGameState())
+    setDeckChoices({ player1: null, player2: null })
+    setSetupStage('player1')
+    setMulliganSelected([])
+    resetSelection()
+    setInspect(null)
+    setInspectedEquipmentId(null)
+    setMessage('手札を選ぶか、フェイズを進めてください')
+  }
+
+  function openLocalMatch() {
+    goHome()
+    setScreen('local')
+  }
+
+  function openOnlineMatch() {
+    goHome()
+    setScreen('online')
+    setOnlineMode(true)
+  }
+
+  if (screen === 'home') {
+    return <main className="home-screen">
+      <div className="home-glow" aria-hidden="true" />
+      <header className="home-topbar">
+        <span className="home-top-brand">LANE FRONTIER <span>WEB</span></span>
+        <a href="https://lane-frontier-game.github.io/lane-frontier/" target="_blank" rel="noopener noreferrer">公式サイト <span aria-hidden="true">↗</span></a>
+      </header>
+      <section className="home-hero" aria-labelledby="home-title">
+        <div className="home-logo-frame">
+          <img src={`${import.meta.env.BASE_URL}cards/LF-icon.jpg`} alt="レーンフロンティア公式ロゴ" />
+        </div>
+        <p className="home-eyebrow">ORIGINAL TRADING CARD GAME</p>
+        <h1 id="home-title">レーンフロンティア</h1>
+        <p className="home-subtitle">領土を切り拓き、戦場を進め。</p>
+        <div className="home-game-actions">
+          <button type="button" className="home-play-button home-play-online" onClick={openOnlineMatch}>
+            <span className="home-play-symbol" aria-hidden="true">↗</span>
+            <span><strong>オンライン対戦</strong><small>別々の端末で遊ぶ</small></span>
+            <span className="home-play-arrow" aria-hidden="true">→</span>
+          </button>
+          <button type="button" className="home-play-button home-play-local" onClick={openLocalMatch}>
+            <span className="home-play-symbol" aria-hidden="true">▣</span>
+            <span><strong>1台でテスト</strong><small>1台の端末で交代して遊ぶ</small></span>
+            <span className="home-play-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+      <section className="home-links" aria-label="公式リンク・お問い合わせ">
+        <h2>公式サイト・お問い合わせ</h2>
+        <div className="home-link-list">
+          <a href="https://lane-frontier-game.github.io/lane-frontier/" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">⌂</span> 公式HP ↗</a>
+          <a href="https://x.com/lean_frontier" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">𝕏</span> 公式X ↗</a>
+          <a href="https://line.me/R/ti/p/@273joulf" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">●</span> 公式LINE ↗</a>
+          <a href="mailto:leanfrontier.official@gmail.com"><span aria-hidden="true">✉</span> メールでお問い合わせ ↗</a>
+        </div>
+      </section>
+      <footer className="home-footer">© Lane Frontier <span>{BUILD_LABEL}</span></footer>
+    </main>
   }
 
   if (onlineMode && (!online.room?.gameJson || !online.session)) {
@@ -654,7 +456,7 @@ function App() {
     return <main className="game-app">
       <header className="game-header"><div><h1>Lane Frontier</h1><p>{BUILD_LABEL}</p></div></header>
       <section className="deck-setup online-lobby">
-        <div className="online-lobby-header"><h2>オンライン対戦</h2><button type="button" className="small-btn" onClick={() => { online.leave(); setOnlineMode(false); setStarted(false) }}>ローカル対戦に戻る</button></div>
+        <div className="online-lobby-header"><h2>オンライン対戦</h2><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button></div>
         {!isOnlineConfigured && <p className="online-warning">オンライン機能は準備できていますが、Firebaseの接続設定がまだ必要です。「オンライン設定手順.txt」に従って設定してください。</p>}
         {!online.session ? <>
           <p>2台のPCで対戦します。片方が部屋を作り、もう片方が8文字の部屋番号で参加してください。</p>
@@ -691,9 +493,8 @@ function App() {
           </div>
         </header>
         <section className="deck-setup">
-          <div className="online-lobby-header"><h2>デッキ選択</h2><button type="button" className="small-btn" onClick={() => { setOnlineMode(true); setStarted(false) }}>オンライン対戦 →</button></div>
+          <div className="online-lobby-header"><h2>デッキ選択</h2><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button><button type="button" className="small-btn" onClick={openOnlineMatch}>オンライン対戦 →</button></div>
           <p>火・風・水から各プレイヤーのデッキを選択してください。現在は1台のPCで交互に操作するテスト版です。</p>
-          <p className="deck-rule">各40枚：基礎領土16枚 ＋ それ以外の8種類を各3枚。開始時にシャッフルして7枚ドローします。</p>
           {(['player1', 'player2'] as const).map(playerId => (
             <div className="deck-player" key={playerId}>
               <h3>{displayPlayer(playerId)}のデッキ</h3>
@@ -726,7 +527,7 @@ function App() {
   }
 
   if (onlineMode && online.room?.stage === 'mulligan' && online.session && online.room.mulliganDone[online.session.seat]) {
-    return <main className="game-app"><section className="mulligan-screen"><h1>引き直し完了</h1><p>相手のマリガンが終わるのを待っています。</p><p>部屋番号：{online.session.code}</p>{online.error && <p role="alert" className="online-error">{online.error}</p>}</section></main>
+    return <main className="game-app"><section className="mulligan-screen"><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button><h1>引き直し完了</h1><p>相手のマリガンが終わるのを待っています。</p><p>部屋番号：{online.session.code}</p>{online.error && <p role="alert" className="online-error">{online.error}</p>}</section></main>
   }
 
   if (setupStage !== 'play') {
@@ -734,7 +535,7 @@ function App() {
     const hand = game.players[mulliganPlayer].hand
     return (
       <main className="game-app">
-        <header className="game-header"><div><h1>Lane Frontier</h1><p>ゲームの準備・初手の引き直し <span className="test-tag">{BUILD_LABEL}</span></p></div></header>
+        <header className="game-header"><div><h1>Lane Frontier</h1><p>ゲームの準備・初手の引き直し <span className="test-tag">{BUILD_LABEL}</span></p></div><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button></header>
         <section className="mulligan-screen">
           <div className="setup-progress">{mulliganPlayer === 'player1' ? '1 / 2' : '2 / 2'}　{displayPlayer(mulliganPlayer)}</div>
           <h2>{displayPlayer(mulliganPlayer)}：マリガン</h2>{onlineMode && <p>自分の手札だけで引き直しを確定してください。相手の手札は画面に表示されません。</p>}
@@ -796,7 +597,8 @@ function App() {
           <span className="version-label">{BUILD_LABEL}</span>
         </div>
         <div className="game-header-actions">
-          {onlineMode ? <button type="button" className="small-btn" onClick={() => { online.leave(); setOnlineMode(false); setStarted(false); setGameLocal(createInitialGameState()); setDeckChoices({player1:null,player2:null}) }}>部屋を退出</button> : <>
+          <button type="button" className="small-btn" onClick={goHome}>ホーム</button>
+          {onlineMode ? <button type="button" className="small-btn" onClick={goHome}>部屋を退出</button> : <>
             <button type="button" className="small-btn" onClick={changeDecks}>デッキ変更</button>
             <button type="button" className="small-btn" onClick={newGame}>再戦</button>
           </>}
@@ -807,6 +609,7 @@ function App() {
         <strong className="turn-owner">{displayPlayer(game.activePlayer)}の手番{onlineMode ? (isMyTurn ? '（あなた）' : '（相手）') : ''}</strong>
         <span>ターン {game.turn}</span>
         <span className="phase-pill">{PHASE_LABELS[game.phase]}フェイズ</span>
+        <span className="opponent-hand-pill">相手の手札 <strong>{opponent.hand.length}枚</strong></span>
         <span className="status-deck">{deckChoices[owner]}デッキ vs {deckChoices[otherPlayer(owner)]}デッキ</span>
       </div>
       {game.winner && <div className="winner-banner">{displayPlayer(game.winner)}の勝利！ {game.winReason}</div>}
@@ -829,10 +632,10 @@ function App() {
             {boardIndices.map(index => {
               const cell = game.board[index]
               const [viewRow, viewCol] = visibleCoordinate(index, owner)
-              const isDestination = destinations.includes(index) && !testRemove && !selectedCard
+              const isDestination = destinations.includes(index) && !selectedCard
               const isSelectedMonster = movingFrom === index
-              const isMagicTarget = magicTargets.includes(index) && !testRemove
-              const isPlacementTarget = placingTargets.includes(index) && !testRemove
+              const isMagicTarget = magicTargets.includes(index)
+              const isPlacementTarget = placingTargets.includes(index)
               const used = cell.monster && !canMoveNow(game, index)
               return (
                 <button type="button" key={index}
@@ -844,7 +647,7 @@ function App() {
                   {cell.castleOwner && <span className="castle-label">{cell.castleOwner === 'player1' ? '城1' : '城2'}</span>}
                   {cell.territory && <img className={`territory-img ${shouldRotateCard(cell.territory.owner, owner) ? 'enemy-card' : ''}`} src={cardImage(cell.territory.cardId)} alt={cardName(cell.territory.cardId)} />}
                   {cell.monster && <img className={`monster-img ${shouldRotateCard(cell.monster.card.owner, owner) ? 'enemy-card' : ''}`} src={cardImage(cell.monster.card.cardId)} alt={cardName(cell.monster.card.cardId)} />}
-                  {cell.monster && <span className="stats">ATK {attackAt(game, index) ?? '?'} / DEF {defenseAt(game, index) ?? '?'}</span>}
+                  {cell.monster && <span className="stats"><span>ATK {attackAt(game, index) ?? '?'}</span><span>DEF {defenseAt(game, index) ?? '?'}</span></span>}
                   {cell.equipments.length > 0 && <span className="equip-count">装備 {cell.equipments.length}</span>}
                   {cell.monster?.equippedId && <span className="equipped-mark" title="装備使用中">装備中</span>}
                   {used && game.phase === 'move' && <span className="no-move-mark">待機</span>}
@@ -920,14 +723,14 @@ function App() {
             ))}</div>
           </div>}
           <div className="panel-card overview-panel">
-            <div className="panel-title"><h2>対戦状況</h2><span>相手の手札は非公開</span></div>
+            <div className="panel-title"><h2>対戦状況</h2><span>相手の手札は枚数のみ表示</span></div>
             <div className="duel-stats">
               <div><small>自分の城</small><strong>{player.deck.length}</strong><small>枚</small></div>
               <div><small>相手の城</small><strong>{opponent.deck.length}</strong><small>枚</small></div>
               <div><small>自分の領土</small><strong>{territoryCount(game, owner)}</strong><small>枚</small></div>
               <div><small>相手の領土</small><strong>{territoryCount(game, otherPlayer(owner))}</strong><small>枚</small></div>
             </div>
-            <p className="duel-substats">相手手札 {opponent.hand.length}枚　｜　通常移動 {game.moveUsedThisTurn ? '実行済み' : '未実行'}</p>
+            <div className="opponent-hand-summary"><span>相手の手札</span><strong>{opponent.hand.length}<small>枚</small></strong><span>通常移動：{game.moveUsedThisTurn ? '実行済み' : '未実行'}</span></div>
           </div>
           <div className="panel-card focus-panel">
             <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
@@ -949,13 +752,6 @@ function App() {
                     <p>{data?.effectText || '効果なし'}</p>
                   </div>
                 </div>
-                <div className="movement-reference-wrapper">{data?.category === 'モンスター' && <div className="movement-reference">
-                    <strong>移動範囲（カード右上の図）</strong>
-                    <MovementArtwork src={cardImage(focused.cardId)} name={cardName(focused.cardId)} />
-                    <small>記載方向：{data.movement || 'なし'}{inspectedCell?.monster?.card.instanceId === focused.instanceId && inspectedCell.monster.equippedId &&
-                    inspectedCell.equipments.find(e => e.instanceId === inspectedCell.monster?.equippedId)?.cardId === 'LF-016' ? ' ／ 羽付きブーツで2を追加' : ''}</small>
-                  </div>}
-                </div>
                 </>
               )
             })() : <p className="focus-empty">手札または戦場のカードをクリックすると、ここに拡大表示します。</p>}
@@ -974,39 +770,10 @@ function App() {
           </div>
           {inspectedCell && <details className="panel-card square-details">
             <summary>選択したマスの詳細</summary>
-            <p>{inspect === null ? '' : `${visibleCoordinate(inspect, owner)[0]}行 ${visibleCoordinate(inspect, owner)[1]}列（手番側から）`}</p>
             <p>領土：{inspectedCell.territory ? cardName(inspectedCell.territory.cardId) : 'なし'}</p>
             <p>モンスター：{inspectedCell.monster ? cardName(inspectedCell.monster.card.cardId) : 'なし'}</p>
             <p>使用中：{inspectedCell.monster?.equippedId ? cardName(inspectedCell.equipments.find(e => e.instanceId === inspectedCell.monster?.equippedId)?.cardId ?? '') : 'なし'}</p>
             <p>設置された装備：{inspectedCell.equipments.map(e => `${cardName(e.cardId)}（${displayPlayer(e.owner)}）`).join('、') || 'なし'}</p>
-          </details>}
-          {!onlineMode && <details className="panel-card demo-panel dev-drawer">
-            <summary>開発用テストを表示</summary>
-            <p>テスト盤面を読み込むと現在の対戦はリセットされます。</p>
-            <label className="test-option"><input type="checkbox" checked={testRemove} onChange={(e: { target: { checked: boolean } }) => { setTestRemove(e.target.checked); resetSelection() }} />選んだマスのカードを墓地へ送る（テスト）</label>
-            <button type="button" onClick={discardCard} disabled={!selectedCard || !!pendingEquip || !!game.pendingEffect || !!game.winner} className="discard-btn">選択した手札を墓地へ（テスト）</button>
-            <div className="choice-list">
-              <button onClick={() => loadDemo('battle')}>戦闘（勝利）</button>
-              <button onClick={() => loadDemo('tie')}>戦闘（相討ち）</button>
-              <button onClick={() => loadDemo('castle')}>城への到達</button>
-              <button onClick={() => loadMagicDemo('rush')}>マジック：血の騒ぎ</button>
-              <button onClick={() => loadMagicDemo('wind')}>マジック：追い風</button>
-              <button onClick={() => loadMagicDemo('ocean')}>マジック：大海の恵み</button>
-              <button onClick={() => loadMagicDemo('current')}>マジック：激流</button>
-              <button onClick={() => loadMonsterDemo('ogre')}>固有効果：オーガ</button>
-              <button onClick={() => loadMonsterDemo('centaur')}>固有効果：ケンタウロス</button>
-              <button onClick={() => loadMonsterDemo('mermaid')}>固有効果：マーメイド</button>
-              <button onClick={() => loadMonsterDemo('prakilorus')}>固有効果：プラキロルス</button>
-              <button onClick={() => loadEquipmentDemo('carry')}>装備：持って移動</button>
-              <button onClick={() => loadEquipmentDemo('drop')}>装備：戦闘後に残る</button>
-              <button onClick={() => loadEquipmentDemo('borrow')}>装備：相手の装備を使用</button>
-              <button onClick={() => loadEquipmentDemo('choose')}>装備：2枚から選ぶ</button>
-              <button onClick={() => loadEquipmentDemo('replace')}>装備：交換しない</button>
-              <button onClick={() => loadCombinationDemo('stack')}>複合：ゴブリン×斧×トレント</button>
-              <button onClick={() => loadCombinationDemo('windBattle')}>複合：追い風×装備×戦闘</button>
-              <button onClick={() => loadCombinationDemo('currentBattle')}>複合：激流×敵の装備×戦闘</button>
-              <button onClick={() => loadCombinationDemo('fallenSpear')}>複合：戦闘後に槍を引き継ぐ</button>
-            </div>
           </details>}
           <details className="panel-card grave-drawer">
             <summary>墓地を見る（自分 {player.graveyard.length}枚 / 相手 {opponent.graveyard.length}枚）</summary>
