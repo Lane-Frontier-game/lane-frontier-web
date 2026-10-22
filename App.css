@@ -550,7 +550,7 @@
 .home-play-arrow { font-size: 24px; }
 .home-links { position: relative; z-index: 1; width: min(100%, 760px); margin: 36px auto 0; border-top: 1px solid #547078; padding-top: 20px; }
 .home-links h2 { color: #d7e4e0; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: .09em; margin: 0 0 14px; }
-.home-link-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.home-link-list { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 9px; }
 .home-link-list a { min-width: 0; min-height: 49px; display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; text-decoration: none; color: #e8eeea; border: 1px solid #476a73; background: #233f48ba; border-radius: 8px; font-size: 12px; padding: 9px 6px; }
 .home-link-list a:hover, .home-topbar a:hover { color: #f8d596; border-color: #c6a56a; }
 .home-link-list a span { font-size: 18px; }
@@ -585,6 +585,9 @@
   .game-in-play .focus-description { overflow-wrap: anywhere; }
   .game-in-play .status-bar { flex-wrap: wrap; }
   .game-in-play .status-bar .status-deck { margin-left: 0; }
+}
+@media (min-width: 541px) and (max-width: 800px) {
+  .home-link-list { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 @media (max-width: 540px) {
   .home-game-actions { grid-template-columns: minmax(0,1fr); gap: 10px; }
@@ -628,3 +631,817 @@
   button, .home-link-list a { touch-action: manipulation; }
   .game-in-play .hand-card, .game-in-play .phase-next, .online-lobby button { min-height: 44px; }
 }
+
+/* ============================================================
+   v0.18.0  Battlefield visual system
+   These styles are view-only; game rules / Firebase remain unchanged.
+   ============================================================ */
+.game-in-play {
+  background: radial-gradient(ellipse at 45% 10%, #1b4850 0%, #0d222e 51%, #08141c 100%);
+  color: #e8e7da;
+}
+.game-in-play .game-header h1 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: .055em; color: #fbebcc; text-shadow: 0 2px 16px #e0b26840; }
+.game-in-play .status-bar {
+  background: linear-gradient(105deg,#133b42,#163039 52%,#233b42);
+  box-shadow: inset 0 1px 0 #ffffff1c;
+  border-color: #64808380;
+}
+.game-in-play .field-panel, .game-in-play .hand-panel, .game-in-play .side-panel .panel-card {
+  border: 1px solid #57747b;
+  background: linear-gradient(158deg,#233e46 0%,#102832 82%);
+  box-shadow: 0 10px 28px #03121965, inset 0 1px 0 #ffffff12;
+}
+.game-in-play .panel-title h2 { color: #f8e6b7; letter-spacing: .08em; }
+.game-in-play .notice { background: linear-gradient(90deg,#203b3e,#182b34); color: #f7df9f; border-radius: 6px; }
+.game-in-play .instruction { background: #061922ae; padding: 6px; border: 1px solid #54707830; }
+.game-in-play .field-panel { position: relative; background: linear-gradient(145deg,#264249 0%,#0e2730 100%); }
+.game-in-play .field-panel::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(135deg,transparent 0 55px,#b5a16b06 56px 57px);
+}
+.game-in-play .board-grid {
+  --cell-size: clamp(41px, 7.35vh, 83px);
+  position: relative;
+  gap: clamp(3px, .52vh, 6px);
+  width: max-content;
+  margin: auto;
+  padding: 4px;
+  filter: drop-shadow(0 9px 15px #050f14b3);
+}
+.game-in-play .field-cell {
+  aspect-ratio: 63 / 83;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #6c8e85;
+  border-radius: 7px;
+  background:
+    radial-gradient(ellipse at 50% 110%, #5e8068aa,transparent 68%),
+    linear-gradient(165deg,#2b5552,#213a40);
+  box-shadow: inset 0 1px 0 #ffffff39, inset 0 -7px 20px #06181960, 0 1px 6px #0007;
+  isolation: isolate;
+  transition: transform 140ms ease, border-color 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+.game-in-play .field-cell::after {
+  content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
+  background: linear-gradient(to bottom, #ffffff17 0%,transparent 19%,transparent 67%,#071b239c 100%);
+}
+.game-in-play .field-cell:hover { transform: translateY(-2px) scale(1.028); filter: brightness(1.11); border-color:#f7d990; }
+.game-in-play .field-cell:active { transform: scale(.97); }
+.game-in-play .field-cell:has(.castle-tile) { border-color: #bca472; }
+.game-in-play .territory-tile, .game-in-play .monster-tile, .game-in-play .castle-tile {
+  position: absolute; inset: 0; display: block; overflow: hidden; pointer-events: none;
+}
+.game-in-play .territory-tile { z-index: 0; }
+.game-in-play .territory-tile img {
+  display: block; width: 100%; height: 100%; object-fit: cover; object-position: center;
+  filter: saturate(.87) contrast(1.02);
+}
+.game-in-play .territory-tile::after {
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 36%,#0d1f2db3 97%);
+}
+.game-in-play .territory-name {
+  position:absolute; z-index:1; bottom:0; left:0; right:0;
+  padding:12px 3px 4px; color:#fff1cb; line-height:1.12; text-align:center;
+  font-size:clamp(8px,.74vw,10px); font-weight:700; text-shadow:0 1px 4px #000;
+  background:linear-gradient(transparent,#0c2528ad);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.game-in-play .monster-tile {
+  z-index:1; inset: 5% 4% 18%; border-radius: 5px;
+  border:1px solid #d0b47999;
+  box-shadow:0 3px 11px #0007, 0 0 0 1px #161e21aa;
+}
+.game-in-play .monster-tile .monster-art {
+  display:block; width:100%;height:100%;object-fit:cover; object-position:center;
+  filter: saturate(1.05) contrast(1.03);
+}
+.game-in-play .monster-tile::after {
+  content:'';position:absolute;inset:34% 0 0;
+  background:linear-gradient(transparent 15%,#061723c7);
+}
+.game-in-play .monster-name {
+  position:absolute;z-index:2;bottom:2px;left:2px;right:2px;
+  text-align:center;color:#fff6df;text-shadow:0 1px 4px #000;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:clamp(7px,.63vw,9px);font-weight:800;
+}
+/* Enemy cards remain upside-down as in the original rules. */
+.game-in-play .monster-tile.opponent-tile .monster-art { transform:rotate(180deg); }
+.game-in-play .monster-tile.opponent-tile { border-color:#dc8d86; }
+.game-in-play .monster-tile.opponent-tile .monster-name { color:#f4bcaa; }
+.game-in-play .field-cell .stats {
+  position:absolute; z-index:7; bottom:0; left:0; right:0; width:100%; max-width:100%;
+  display:flex; flex-direction:row; align-items:center; justify-content:space-around; gap:1px;
+  background:linear-gradient(110deg,#132c32ef,#0e202ded);
+  border:0;border-radius:0 0 5px 5px; padding:4px 1px;
+  font-size:clamp(8px,.82vw,11px);font-variant-numeric:tabular-nums;
+  white-space:nowrap; overflow:visible;
+}
+.game-in-play .field-cell .stats span { display:inline-flex;align-items:center;gap:2px; }
+.game-in-play .field-cell .stats b { font-size:.76em;color:#e8c98e; }
+.game-in-play .castle-tile {
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  color:#ffeac0;background:radial-gradient(ellipse at center,#ad87536b,transparent 69%),linear-gradient(150deg,#1d434b,#14242b);
+  border:2px solid #bba26a88;
+}
+.game-in-play .castle1 .castle-tile { box-shadow:inset 0 0 25px #4884b182; }
+.game-in-play .castle2 .castle-tile { box-shadow:inset 0 0 25px #bd5e5e59; }
+.game-in-play .castle-icon { font-family:Georgia,serif;font-size:clamp(27px,3.5vw,42px);line-height:1.2;text-shadow:0 0 25px #f3c66a8c; }
+.game-in-play .castle-word { font-size:clamp(6px,.6vw,9px);letter-spacing:.05em;color:#ffe6b0;text-align:center; }
+.game-in-play .field-cell .equip-count { top:2px;right:2px;z-index:8;font-weight:800;font-size:9px; }
+.game-in-play .field-cell .equipped-mark { top:20px;right:2px;z-index:8;font-size:9px; }
+.game-in-play .field-cell .no-move-mark { z-index:8; top:2px;left:2px; background:#1c2f3ed9; }
+.game-in-play .field-cell.valid-move, .game-in-play .field-cell.valid-magic,.game-in-play .field-cell.valid-placement {
+  outline-offset:2px; animation:lfTargetPulse 1.4s ease-in-out infinite;
+}
+.game-in-play .field-cell.valid-placement { outline:3px solid #f4cf84; }
+.game-in-play .field-cell.valid-magic { outline:3px solid #7ad5f0; }
+.game-in-play .field-cell.just-changed { animation:lfDeployPulse .8s ease-out both; z-index:4; }
+.game-in-play .field-cell .move-target { z-index:9; font-size:12px; }
+.game-in-play .field-cell .placement-target-label { z-index:10; }
+@keyframes lfTargetPulse { 0%,100% {box-shadow:0 0 9px #f4d99331;}50%{box-shadow:0 0 20px #ffdf82b6,inset 0 0 20px #f9d37c35;} }
+@keyframes lfDeployPulse { 0% {filter:brightness(2.1);transform:scale(1.1);box-shadow:0 0 42px #f9d384;}100%{filter:brightness(1);transform:scale(1);box-shadow:inset 0 1px 0 #ffffff39;} }
+
+/* Phase navigator */
+.game-in-play .phase-track {
+  display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px;
+  background:#102833a6;border:1px solid #59747c88;border-radius:8px;
+  padding:6px;min-height:38px;flex-shrink:0;
+}
+.game-in-play .phase-track-item {
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:clamp(9px,.83vw,12px);color:#a5bdc0;border-radius:6px;
+  padding:5px 2px; white-space:nowrap;
+}
+.game-in-play .phase-track-dot {
+  display:grid;place-items:center;flex:0 0 17px;width:17px;height:17px;
+  border-radius:50%;border:1px solid #597681;color:#afc5c4;font-size:10px;
+}
+.game-in-play .phase-track-item.done { color:#c7c6a4; }
+.game-in-play .phase-track-item.done .phase-track-dot { background:#2b5550;border-color:#5d8577;color:#c6f4d8; }
+.game-in-play .phase-track-item.current {background:linear-gradient(100deg,#b68845,#efcb83);color:#1e2931;font-weight:900;box-shadow:0 0 13px #e6b66555;}
+.game-in-play .phase-track-item.current .phase-track-dot {background:#223a3e;color:#fce1a6;border-color:#223a3e;}
+
+/* Tactile hand */
+.game-in-play .hand-panel { background:linear-gradient(140deg,#1a3942,#142a33); }
+.game-in-play .hand-list { padding: 10px 7px 14px;scroll-behavior:smooth; }
+.game-in-play .hand-card {
+  position:relative; border:1px solid #a1ad9e; border-radius:8px;
+  background:linear-gradient(145deg,#304e56,#152a31);
+  box-shadow:0 5px 12px #0006;
+  transform-origin:bottom center;
+  transition: transform .2s cubic-bezier(.2,.9,.3,1.1), box-shadow .2s, border-color .2s;
+}
+.game-in-play .hand-card:hover { transform:translateY(-9px) scale(1.06); z-index:3; box-shadow:0 14px 22px #0009; }
+.game-in-play .hand-card.selected-card { transform:translateY(-12px) scale(1.055); z-index:4; border-color:#f7d488; box-shadow:0 0 0 2px #e5c37d,0 13px 25px #000a,0 0 25px #eac26c70; }
+.game-in-play .hand-card.newly-drawn {animation:lfDrawIn .55s cubic-bezier(.17,.9,.3,1.13) both;}
+@keyframes lfDrawIn {from{opacity:0;transform:translateY(-45px) rotate(-11deg) scale(.77);filter:brightness(1.8);}to{opacity:1;transform:translateY(0) rotate(0) scale(1);filter:brightness(1);}}
+.game-in-play .hand-phase-controls {background:linear-gradient(90deg,#294b51,#1f3e48);border-color:#6b8480;}
+.game-in-play .phase-next {background:linear-gradient(125deg,#f6d791,#d8a950);color:#192d34;box-shadow:inset 0 1px 0 #ffffff90,0 2px 10px #0005;}
+.game-in-play .phase-next:not(:disabled):hover {filter:brightness(1.1);transform:translateY(-1px);}
+
+/* On-screen cue overlay; pointer-events none so it cannot block gameplay. */
+.visual-cue {position:fixed;inset:0;z-index:125;pointer-events:none;display:grid;place-items:center;overflow:hidden;isolation:isolate;}
+.visual-vignette {position:absolute;inset:0;background:radial-gradient(ellipse at center,#042b37a8 0%,#030f1bd3 65%);animation:lfCueFade 1.1s ease-out both;}
+.visual-strike {position:absolute;top:39%;left:-20%;width:140%;height:19%;transform:skewY(-5deg);background:linear-gradient(95deg,transparent,#d9ab5182 26%,#f5d488c9 48%,#bd8d3d86 77%,transparent);filter:blur(1px);animation:lfStrike 1.1s cubic-bezier(.2,.6,.3,1) both;}
+.visual-content {display:flex;flex-direction:column;align-items:center;gap:4px;max-width:90vw;position:relative;z-index:2;text-align:center;animation:lfCueText 1.1s ease-out both;}
+.visual-content strong {font-size:clamp(36px,7vw,87px);line-height:1.15;font-family:Georgia,'Times New Roman',serif;color:#ffe7a6;text-shadow:0 4px 24px #000,0 0 35px #d6a450aa;font-weight:900;letter-spacing:.12em;}
+.visual-category {font-size:11px;letter-spacing:.4em;color:#d4ede8;text-shadow:0 1px 8px #000;}
+.visual-subtitle {font-size:clamp(14px,2.5vw,25px);color:#fff9e8;font-weight:700;text-shadow:0 2px 8px #000;max-width:90vw;}
+.visual-art {max-width:min(290px,50vw);max-height:25vh;aspect-ratio:4/3;object-fit:cover;border:3px solid #e5c176;border-radius:9px;box-shadow:0 0 30px #d9b2668c;animation:lfArtPop 1.1s ease-out both;}
+.visual-phase .visual-vignette,.visual-draw .visual-vignette {background:radial-gradient(ellipse at center,#0b374376,transparent 85%);}
+.visual-phase .visual-content strong,.visual-deploy .visual-content strong {font-size:clamp(31px,5vw,62px);}
+/* v0.18.2: 中サイズのフェイズ通知。盤面を隠さず、文字は明確に読める大きさ。 */
+.visual-cue.visual-phase,
+.visual-cue.visual-draw {
+  inset: auto;
+  top: clamp(86px, 16vh, 160px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 30px));
+  height: auto;
+  display: block;
+  overflow: visible;
+  isolation: auto;
+}
+.visual-cue.visual-phase .visual-vignette,
+.visual-cue.visual-draw .visual-vignette,
+.visual-cue.visual-phase .visual-strike,
+.visual-cue.visual-draw .visual-strike { display: none; }
+.visual-cue.visual-phase .visual-content,
+.visual-cue.visual-draw .visual-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: none;
+  padding: 15px 20px 18px;
+  box-sizing: border-box;
+  background: linear-gradient(105deg, #102d37f0 0%, #25525bea 50%, #102d37f0 100%);
+  border: 1px solid #d2af6f;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #0009, inset 0 1px 0 #ffffff2c, 0 0 17px #d0a65c34;
+  animation: lfMediumPhaseIn .95s ease-out both;
+}
+.visual-cue.visual-phase .visual-content strong,
+.visual-cue.visual-draw .visual-content strong {
+  display: block;
+  font: 800 clamp(24px, 3.5vw, 36px)/1.25 system-ui, sans-serif;
+  letter-spacing: .12em;
+  color: #ffe6ac;
+  text-shadow: 0 2px 11px #000a;
+  white-space: nowrap;
+}
+.visual-cue.visual-phase .visual-category,
+.visual-cue.visual-draw .visual-category {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .34em;
+  color: #dfddd0;
+}
+.visual-cue.visual-phase .visual-subtitle,
+.visual-cue.visual-draw .visual-subtitle {display: none;}
+@keyframes lfMediumPhaseIn {
+  0% {opacity: 0; transform: translateY(-20px) scale(.94);}
+  22% {opacity: 1; transform: translateY(0) scale(1);}
+  69% {opacity: 1; transform: translateY(0) scale(1);}
+  100% {opacity: 0; transform: translateY(-7px) scale(.99);}
+}
+@media (max-width: 540px) {
+  .visual-cue.visual-phase,
+  .visual-cue.visual-draw {top: clamp(68px, 12vh, 115px);}
+  .visual-cue.visual-phase .visual-content,
+  .visual-cue.visual-draw .visual-content {padding: 12px 14px 14px; gap: 4px;}
+  .visual-cue.visual-phase .visual-content strong,
+  .visual-cue.visual-draw .visual-content strong {font-size:clamp(22px, 6vw, 28px);}
+}
+.game-in-play .phase-track-item.current { animation: lfPhaseMark .42s ease-out; }
+@keyframes lfPhaseMark {
+  0% {box-shadow: 0 0 0 0 #f4d99cbb;}
+  100% {box-shadow: 0 0 13px #e6b66555;}
+}
+
+.visual-victory {z-index:131;}
+.visual-victory .visual-vignette {background:radial-gradient(ellipse at center,#927138bb,#021018e8);}
+@keyframes lfStrike {0%{opacity:0;transform:translateX(-110%) skewY(-5deg);}22%{opacity:1;transform:translateX(0) skewY(-5deg);}70%{opacity:.8;}100%{opacity:0;transform:translateX(10%) skewY(-5deg);}}
+@keyframes lfCueText {0%{opacity:0;filter:blur(13px);transform:scale(1.19);}25%{opacity:1;filter:blur(0);transform:scale(1);}65%{opacity:1;}100%{opacity:0;transform:scale(.98);}}
+@keyframes lfCueFade {0%{opacity:0;}20%{opacity:1;}70%{opacity:1;}100%{opacity:0;}}
+@keyframes lfArtPop {0%{transform:translateY(45px) scale(.75);}35%{transform:translateY(0) scale(1);}100%{transform:translateY(-10px) scale(1.02);}}
+
+/* Home scenery: uses existing game art, no generated assets. */
+.home-screen::before {content:'';pointer-events:none;position:absolute;inset:-5% 0 auto;height:75%;background:linear-gradient(#041922d6,#071e27ea),url('/cards/LF-027.jpg') center/cover;opacity:.26;filter:blur(2px);}
+.home-logo-frame {animation:lfHeroArrive .65s ease-out both;}
+.home-hero h1,.home-subtitle,.home-game-actions {animation:lfHeroArrive .7s .1s ease-out both;}
+@keyframes lfHeroArrive {from{opacity:0;transform:translateY(15px);}to{opacity:1;transform:translateY(0);}}
+
+@media (min-width:1101px) and (min-height:611px) {
+ .game-in-play .game-layout {grid-template-columns:minmax(420px,1.46fr) minmax(255px,.76fr) minmax(260px,.8fr);gap:12px;}
+ .game-in-play .board-grid {--cell-size:clamp(40px,7.2vh,84px);}
+ .game-in-play .hand-list {gap:8px;align-content:start;}
+ .game-in-play .hand-card {flex:0 0 74px;width:74px;height:104px;}
+}
+@media (min-width:901px) and (max-width:1100px) {
+ .game-in-play .board-grid {--cell-size:clamp(40px,7.4vh,74px);}
+}
+@media (max-width:900px) {
+ .game-in-play .game-layout {grid-template-areas:'field' 'hand' 'side';grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;}
+ .game-in-play .board-grid {--cell-size:min(15.8vw,78px);gap:4px;}
+ .game-in-play .field-panel {padding:12px;min-height:0;}
+ .game-in-play .hand-list {padding:13px 8px 18px;}
+ .game-in-play .hand-card {flex:0 0 80px;width:80px;height:113px;}
+ .game-in-play .side-panel {overflow:visible;}
+}
+@media (max-width:540px) {
+ .game-in-play {padding:7px; gap:6px;}
+ .game-in-play .game-header {min-height:0;}
+ .game-in-play .status-bar {gap:6px;}
+ .game-in-play .phase-track {gap:2px;padding:5px 3px;min-height:32px;}
+ .game-in-play .phase-track-item {flex-direction:column;gap:2px;font-size:9px;padding:3px 1px;}
+ .game-in-play .phase-track-dot {height:12px;width:12px;flex-basis:12px;font-size:8px;}
+ .game-in-play .field-panel {padding:7px 5px;}
+ .game-in-play .board-grid {--cell-size:min(17.25vw,65px);gap:3px;padding:1px;}
+ .game-in-play .field-cell {border-radius:4px;}
+ .game-in-play .monster-tile {border-radius:3px;inset:3% 3% 22%;}
+ .game-in-play .field-cell .stats {font-size:clamp(7px,1.9vw,9px);padding:3px 0;}
+ .game-in-play .field-cell .stats b {font-size:.72em;}
+ .game-in-play .territory-name {font-size:8px;padding-bottom:3px;}
+ .game-in-play .monster-name {font-size:8px;}
+ .game-in-play .castle-icon {font-size:30px;}
+ .game-in-play .castle-word {font-size:6px;}
+ .game-in-play .field-cell .equip-count,.game-in-play .field-cell .equipped-mark {font-size:7px;}
+ .game-in-play .hand-card {flex:0 0 82px;width:82px;height:116px;}
+ .visual-art {max-height:22vh;}
+ .visual-content strong {font-size:clamp(31px,10vw,50px);}
+}
+@media (prefers-reduced-motion:reduce) {
+ .game-in-play .hand-card, .game-in-play .field-cell, .game-in-play .phase-next {transition:none !important;}
+ .game-in-play .field-cell.just-changed,.game-in-play .field-cell.valid-placement,.game-in-play .field-cell.valid-move,.game-in-play .field-cell.valid-magic,.game-in-play .hand-card.newly-drawn,.visual-content,.visual-strike,.visual-vignette,.visual-art,.home-logo-frame,.home-hero h1,.home-subtitle,.home-game-actions {animation:none !important;}
+ .visual-cue, .visual-cue.visual-phase, .visual-cue.visual-draw {display:none;}
+}
+.game-in-play .castle-icon {width: min(72%,70px);height: auto;max-height:70%;overflow:visible;filter:drop-shadow(0 4px 10px #0009);}
+.game-in-play .visual-toggle[aria-pressed="true"] {border-color:#aa956b;color:#ffdead;}
+.game-in-play .visual-toggle[aria-pressed="false"] {opacity:.7;}
+
+/* v0.19.0: deck library, readable spell/equipment and concise tactile animations */
+.home-deck-browser-button {
+  margin-top: 14px; padding: 11px 24px; border-radius: 9px;
+  border: 1px solid #bda06f; background: #28484eab; color: #f9e5b5;
+  font-size: 15px; font-weight: 800; cursor: pointer; transition: background .2s, transform .2s;
+}
+.home-deck-browser-button:hover { background: #3b6368; transform: translateY(-2px); }
+.home-deck-browser-button span { padding-left: 12px; }
+.deck-library-page { min-height:100vh; }
+.deck-library { max-width: 1130px; margin: 24px auto; padding: clamp(12px,3vw,24px); background:#19343d; border:1px solid #628188; border-radius:16px; color:#e9f2ec; }
+.deck-library>p { color:#c6d8d4; margin:8px 0 22px; }
+.deck-library-tabs { display:flex; gap:10px; flex-wrap:wrap; }
+.deck-library-tabs button { background:#2a4a50; border:1px solid #658183; border-radius:9px; color:#fff0d6; padding:12px 22px; font-weight:800; cursor:pointer; }
+.deck-library-tabs button.active { background:linear-gradient(115deg,#e3bd71,#ad8549); color:#132b35; border-color:#f8dfa2; }
+.deck-library-layout { display:grid; grid-template-columns: minmax(0, 1fr) minmax(205px, 285px); gap:24px; align-items:start; }
+.deck-library-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:13px; }
+.deck-library-card { position:relative; display:flex; flex-direction:column; align-items:center; gap:5px; border:1px solid #496b75; border-radius:10px; background:#24434d; color:#ffeed2; padding:8px; cursor:pointer; min-width:0; }
+.deck-library-card img { width:100%; max-width:155px; aspect-ratio:104/147; object-fit:contain; }
+.deck-library-card span { font-size:12px; line-height:1.3; text-align:center; }
+.deck-library-card strong { position:absolute; top:9px; right:9px; border-radius:5px; background:#f2cf85; color:#172b33; padding:4px 7px; box-shadow:0 2px 9px #0009; }
+.deck-library-card.active { outline:2px solid #f8d888; border-color:#f8d888; }
+.deck-library-card:hover { filter:brightness(1.17); }
+.deck-library-detail { position:sticky; top:15px; padding:15px; border:1px solid #7b897f; border-radius:12px; background:#112d37; }
+.deck-library-detail>img { display:block; max-height:360px; max-width:100%; margin:0 auto 12px; object-fit:contain; border-radius:7px; }
+.deck-library-detail h2 { font-size:19px; margin:8px 0; color:#f8d89d; }
+.deck-library-detail p { font-size:13px; line-height:1.65; overflow-wrap:anywhere; }
+.deck-library-effect { padding:12px; border-radius:8px; background:#2a4a52; }
+
+/* Equipment images are small enough not to hide the monster's artwork. */
+.game-in-play .field-cell .equip-thumbnails { position:absolute; z-index:12; right:2px; top:2px; display:flex; flex-direction:column; gap:2px; pointer-events:none; }
+.game-in-play .field-cell .equip-thumbnail { width:clamp(17px,1.8vw,26px); height:clamp(23px,2.5vw,36px); display:block; overflow:hidden; border-radius:3px; border:1px solid #a7b6b4; box-shadow:0 2px 5px #000a; background:#233943; }
+.game-in-play .field-cell .equip-thumbnail img { width:100%; height:100%; object-fit:cover; object-position:center; }
+.game-in-play .field-cell .equip-thumbnail.in-use { border:2px solid #f7d777; box-shadow:0 0 10px #f8c663b0; }
+.game-in-play .field-cell .equip-overflow { background:#142d38e8; color:#fff0bf; font-size:9px; font-weight:800; border-radius:4px; line-height:1.4; }
+
+/* Summons appear on their actual cells instead of silently fading in. */
+.game-in-play .field-cell.summon-arriving .monster-tile { animation:lfMonsterArrival .43s cubic-bezier(.22,.85,.28,1.3) both; }
+.game-in-play .field-cell.summon-arriving::before { content:''; position:absolute; inset:8%; z-index:10; pointer-events:none; border:2px solid #fff0aa; border-radius:45%; animation:lfSummonRing .48s ease-out both; }
+@keyframes lfMonsterArrival { 0% { opacity:0; transform:translateY(-36%) scale(1.38); filter:brightness(2.3); } 65% {opacity:1; transform:translateY(4%) scale(.94);filter:brightness(1.3);} 100% {opacity:1;transform:translateY(0) scale(1);filter:brightness(1);} }
+@keyframes lfSummonRing { from {opacity:1; transform:scale(.28); box-shadow:0 0 25px #ffe2a9;} to {opacity:0;transform:scale(1.7); box-shadow:0 0 2px #ffe2a9;} }
+.game-in-play .field-cell.magic-impact { animation:lfMagicCellFlash .68s ease-out both; }
+@keyframes lfMagicCellFlash {0% {box-shadow:0 0 0 0 #94eaf0, 0 0 24px #99eeffaa;filter:brightness(1.9);}100%{box-shadow:inset 0 1px 0 #ffffff39;filter:brightness(1);} }
+
+/* Drawn cards descend from above and slot into their sorted position. */
+.game-in-play .hand-card.newly-drawn { animation:lfCardDrop .48s cubic-bezier(.15,.88,.35,1.18) both; }
+@keyframes lfCardDrop { from {opacity:0;transform:translateY(-90px) scale(.83);filter:brightness(1.7);} 74%{opacity:1;transform:translateY(5px) scale(1.01);filter:brightness(1.1);} to{opacity:1;transform:translateY(0) scale(1);filter:brightness(1);} }
+
+/* Initial seven-card deal; animation is visual only. */
+.mulligan-card.deal-hidden { visibility:hidden; pointer-events:none; }
+.mulligan-card.dealt-in { animation:lfDealCard .36s cubic-bezier(.2,.85,.35,1.1) both; }
+@keyframes lfDealCard { from {opacity:0;transform:translateY(-95px) scale(.8) rotate(-5deg);} to {opacity:1;transform:translateY(0) scale(1) rotate(0);} }
+.mulligan-screen .mulligan-dealing-label { color:#f1cd86; text-align:center; font-weight:800; letter-spacing:.05em; }
+
+/* Short, readable magic spell overlay: preserve the underlying battlefield. */
+.spell-cast-overlay { position:fixed; inset:0; z-index:140; pointer-events:none; display:grid; place-items:center; }
+.spell-cast-burst { position:absolute; inset:0; background:radial-gradient(ellipse at center, #5bdad942,transparent 65%); animation:lfSpellGlow 1.25s ease-out both; }
+.spell-cast-card { position:relative; display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 20px;border-radius:13px;background:linear-gradient(155deg,#133b4ce8,#112631ef);border:1px solid #b6ded4;box-shadow:0 12px 60px #000b,0 0 34px #65f0df5c;animation:lfSpellCast 1.25s ease-out both; }
+.spell-cast-card img {max-height:min(30vh,225px);max-width:42vw;aspect-ratio:104/147;object-fit:contain;border-radius:5px;}
+.spell-cast-card strong {font-size:clamp(16px,3vw,24px);color:#fff0c2;text-shadow:0 2px 5px #000;}
+.spell-cast-card span {font-size:10px;letter-spacing:.22em;color:#a6e9e3;font-weight:800;}
+@keyframes lfSpellCast { 0%{opacity:0;transform:translateY(28px) scale(.76);} 18%{opacity:1;transform:translateY(0) scale(1.04);} 75%{opacity:1;transform:scale(1);} 100%{opacity:0;transform:translateY(-18px) scale(1.05);} }
+@keyframes lfSpellGlow {0%{opacity:0;}20%{opacity:1;}100%{opacity:0;}}
+@media (max-width:660px){
+  .deck-library-layout {grid-template-columns:minmax(0,1fr);}
+  .deck-library-grid {gap:7px;}
+  .deck-library-card {padding:4px;}
+  .deck-library-card span {font-size:10px;}
+  .deck-library-detail {position:static;}
+  .deck-library-detail>img {max-height:240px;}
+  .game-in-play .field-cell .equip-thumbnail {width:16px;height:22px;}
+  .spell-cast-card img{max-height:25vh;max-width:45vw;}
+}
+@media(prefers-reduced-motion:reduce){
+  .game-in-play .field-cell.summon-arriving .monster-tile,.game-in-play .field-cell.summon-arriving::before,.game-in-play .field-cell.magic-impact,.game-in-play .hand-card.newly-drawn,.mulligan-card.dealt-in,.spell-cast-burst,.spell-cast-card {animation:none!important;}
+  .spell-cast-overlay {display:none;}
+}
+
+
+/* v0.19.1: initial hand and redrawn cards settle into LF number order. */
+.mulligan-screen .mulligan-hand { min-height: 147px; align-items: flex-start; }
+.mulligan-screen .mulligan-card.mulligan-preview-card { cursor: default; }
+.mulligan-screen .mulligan-card:disabled:not(.deal-hidden) { opacity: 1; }
+.mulligan-new-badge { position:absolute; top:3px; left:3px; z-index:2; padding:2px 5px;
+  border-radius:3px; background:#f0c875; color:#203039; font-size:10px; font-weight:900; box-shadow:0 1px 5px #0009; }
+
+/* Equipment use: central card cue and localized glow on the equipped monster. */
+.equip-cast-overlay { position:fixed; inset:0; z-index:142; display:grid; place-items:center; pointer-events:none; }
+.equip-cast-burst { position:absolute; inset:0; background:radial-gradient(ellipse at center,#ffe7a34a,transparent 62%); animation:lfEquipGlow 1.35s ease-out both; }
+.equip-cast-card { display:flex; flex-direction:column; align-items:center; gap:4px; position:relative;
+  padding:15px 19px; border-radius:13px; background:linear-gradient(145deg,#383225ed,#162a31f2);
+  border:1px solid #f8d288; box-shadow:0 12px 64px #000b,0 0 32px #f7c66b82;
+  animation:lfEquipFly 1.35s cubic-bezier(.2,.8,.25,1) both; }
+.equip-cast-card img { max-height:min(30vh,225px); max-width:42vw; aspect-ratio:104/147; object-fit:contain; border-radius:5px; }
+.equip-cast-card strong { font-size:clamp(16px,3vw,24px); color:#ffe8b2; text-shadow:0 2px 5px #000; }
+.equip-cast-card span { font-size:10px; font-weight:900; letter-spacing:.22em; color:#ffdfa0; }
+@keyframes lfEquipFly { 0% {opacity:0;transform:translateY(-32px) scale(.78) rotate(-4deg);}
+  20% {opacity:1;transform:translateY(0) scale(1.05) rotate(0);}
+  67% {opacity:1;transform:scale(1);}
+  100% {opacity:0;transform:translateY(52px) scale(.25);} }
+@keyframes lfEquipGlow { 0% {opacity:0;} 20%{opacity:1;} 75%{opacity:1;} 100%{opacity:0;} }
+.game-in-play .field-cell.equip-impact { animation:lfEquipCell .85s ease-out both; }
+@keyframes lfEquipCell { 0%{box-shadow:0 0 0 1px #ffe0a4,0 0 34px #ffd083;filter:brightness(1.65);}
+  45%{box-shadow:0 0 0 3px #f1d78e,0 0 30px #eab864;} 100%{filter:brightness(1);} }
+@media(max-width:660px){ .mulligan-screen .mulligan-hand { min-height:115px; }
+  .equip-cast-card img { max-height:25vh; max-width:45vw; } }
+@media(prefers-reduced-motion:reduce){ .equip-cast-overlay { display:none; }
+  .game-in-play .field-cell.equip-impact,.equip-cast-burst,.equip-cast-card {animation:none!important;} }
+
+
+/* v0.19.4: Keep movement on the battlefield. No large MOVE/BATTLE cut-in. */
+.game-in-play .board-move-flight {
+  position: absolute; z-index: 30; pointer-events: none; border-radius: 6px;
+  animation: lfBoardRush .575s cubic-bezier(.18,.73,.18,1) both;
+  filter: drop-shadow(0 3px 8px #000b) drop-shadow(0 0 9px #fff2a4ba);
+  transform-origin: center center;
+}
+.game-in-play .board-move-flight .board-move-monster {
+  position: absolute; inset: 5% 4% 18%; border: 2px solid #ffe6a0;
+  border-radius: 6px; overflow: hidden; box-shadow: 0 0 18px #fff0ab85;
+}
+.game-in-play .board-move-flight .board-move-monster img {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+}
+.game-in-play .board-move-flight .board-move-monster.opponent-tile img { transform: rotate(180deg); }
+.game-in-play .board-move-flight.move-battle .board-move-monster {
+  border-color: #ffa79a; box-shadow: 0 0 20px #ff6d5b99;
+}
+.game-in-play .board-move-streak {
+  position: absolute; left: 14%; right: 14%; top: 20%; height: 5px;
+  background: linear-gradient(90deg,transparent,#ffedb7c7,transparent);
+  filter: blur(2px); animation: lfBoardStreak .575s ease-out both;
+}
+@keyframes lfBoardRush {
+  0% { transform: translate(0,0) scale(1); opacity: .95; }
+  16% { transform: translate(var(--move-short-x),var(--move-short-y)) scale(.79); opacity: 1; }
+  58% { transform: translate(var(--move-x),var(--move-y)) scale(1.22); opacity: 1; }
+  74% { transform: translate(var(--move-x),var(--move-y)) scale(.93); opacity: 1; }
+  100% { transform: translate(var(--move-x),var(--move-y)) scale(1); opacity: 0; }
+}
+@keyframes lfBoardStreak {
+  0%,100% {opacity: 0; transform: scaleX(.6);}
+  33% {opacity: 1; transform: scaleX(1.8);}
+  70% {opacity: .5; transform: scaleX(.7);}
+}
+/* Reveal the destination monster only after the travelling artwork lands. */
+.game-in-play .field-cell.move-landing-pending .monster-tile,
+.game-in-play .field-cell.move-landing-pending .stats,
+.game-in-play .field-cell.move-landing-pending .equip-thumbnails { visibility: hidden; }
+.game-in-play .field-cell.move-impact { z-index: 11; animation: lfMoveImpact .48s ease-out both; }
+.game-in-play .field-cell.move-impact::before {
+  content: ''; position: absolute; inset: 5%; z-index: 15; pointer-events: none;
+  border: 2px solid #ffe29b; border-radius: 35%; animation: lfMoveShock .48s ease-out both;
+}
+@keyframes lfMoveImpact {
+  0% { box-shadow: 0 0 0 4px #f8de9c, 0 0 34px #ffd77cad; filter: brightness(1.7); }
+  50% { box-shadow: 0 0 0 2px #ffe7aa, 0 0 17px #ffd77c70; filter: brightness(1.25); }
+  100% { box-shadow: inset 0 1px 0 #ffffff39; filter: brightness(1); }
+}
+@keyframes lfMoveShock { from {opacity:1;transform:scale(.35);} to {opacity:0;transform:scale(1.75);} }
+@media (prefers-reduced-motion: reduce) {
+  .game-in-play .board-move-flight { display: none; }
+  .game-in-play .field-cell.move-landing-pending .monster-tile,
+  .game-in-play .field-cell.move-landing-pending .stats,
+  .game-in-play .field-cell.move-landing-pending .equip-thumbnails { visibility: visible; }
+  .game-in-play .field-cell.move-impact, .game-in-play .field-cell.move-impact::before { animation: none !important; }
+}
+
+
+/* v0.19.5: Optional monster ability is an explicit decision, not a sidebar footnote. */
+.game-in-play .field-cell.optional-effect-source { outline:3px solid #ffc66b; outline-offset:2px; z-index:12; animation: lfOptionalSource 1.15s ease-in-out infinite alternate; }
+.game-in-play .optional-source-label { position:absolute; z-index:18; left:3px; top:3px; border-radius:4px; padding:2px 5px; font-size:10px; font-weight:800; background:#f6c971; color:#211e20; box-shadow:0 2px 7px #0009; }
+@keyframes lfOptionalSource { from{ box-shadow:0 0 6px #ffdd7288; } to{box-shadow:0 0 22px #ffc76cdd;} }
+.optional-effect-backdrop { position:fixed; inset:0; z-index:150; display:flex; align-items:center; justify-content:center; padding:16px; background:#081b269a; backdrop-filter:blur(2px); }
+.optional-effect-dialog { width:min(100%,550px); border:2px solid #ecc77f; border-radius:15px; padding:18px; background:linear-gradient(150deg,#193745,#0e1f2c); color:#fff8e9; box-shadow:0 20px 80px #000e,0 0 35px #c7983c65; animation:lfOptionalOpen .2s ease-out both; }
+.optional-effect-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:12px; border-bottom:1px solid #d6ba7960; }
+.optional-effect-heading span { color:#f0c97b; font-size:11px; letter-spacing:.2em; font-weight:850; }
+.optional-effect-heading strong { font-size:clamp(16px,3vw,22px); }
+.optional-effect-body { display:flex; gap:18px; align-items:center; padding:17px 0; }
+.optional-effect-art { width:105px; max-height:152px; flex:none; object-fit:contain; border-radius:7px; box-shadow:0 4px 20px #000c; }
+.optional-effect-content {flex:1;min-width:0;}
+.optional-effect-content h2 { font-size:clamp(17px,2.4vw,24px); color:#ffdf9b; margin:0 0 10px; }
+.optional-effect-content p { margin:0; font-weight:700; font-size:clamp(13px,1.8vw,16px); line-height:1.65; }
+.optional-effect-note { display:block; margin-top:10px; font-size:12px; color:#afcfde; }
+.optional-effect-actions {display:flex;gap:12px;}
+.optional-effect-actions button {flex:1;min-height:46px;border-radius:8px;padding:11px;font-weight:900;font-size:15px;cursor:pointer;}
+.optional-effect-yes { color:#17262d;background:#f8cf7e;border:1px solid #ffe4ac; }
+.optional-effect-no { color:#f0f4f4;background:#355568;border:1px solid #72909c; }
+.optional-effect-actions button:disabled {opacity:.55;cursor:not-allowed;}
+.optional-effect-used {position:fixed;z-index:128;left:50%;top:clamp(85px,13vh,145px);transform:translateX(-50%);pointer-events:none;display:flex;gap:9px;align-items:center;border:1px solid #f0c76d99;background:#102c3cef;color:#f7e9bb;border-radius:9px;padding:8px 15px;box-shadow:0 6px 25px #000a;animation:lfEffectUsed .95s ease-out both;white-space:nowrap;max-width:92vw;}
+.optional-effect-used span{font-size:10px;letter-spacing:.1em;}
+.optional-effect-used strong{font-size:clamp(13px,2.3vw,17px);}
+@keyframes lfOptionalOpen {from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes lfEffectUsed{0%{opacity:0;transform:translate(-50%,-12px);}20%{opacity:1;transform:translate(-50%,0);}78%{opacity:1;}100%{opacity:0;transform:translate(-50%,-7px);}}
+@media(max-width:660px){
+  .optional-effect-dialog {padding:12px;}
+  .optional-effect-body{gap:10px;padding:12px 0;}
+  .optional-effect-art{width:80px;max-height:115px;}
+  .optional-effect-actions{gap:8px;}
+  .optional-effect-actions button{padding:8px;min-height:43px;}
+  .optional-effect-heading span{font-size:9px;}
+  .optional-effect-note{font-size:11px;}
+}
+/* Each casualty leaves the board toward a temporary graveyard marker. */
+.game-in-play .battle-grave-target {position:absolute;right:2px;top:-12px;z-index:43;pointer-events:none;border-radius:8px;background:#2a2534ec;border:1px solid #c8afc1;color:#fff4e6;font-weight:850;font-size:13px;padding:7px 12px;box-shadow:0 0 14px #b07aa199;}
+.game-in-play .battle-grave-flight { position:absolute; z-index:42; pointer-events:none; transform-origin:center; animation:lfGraveSend .93s cubic-bezier(.21,.72,.33,1) var(--grave-delay) both; }
+.game-in-play .battle-grave-flight img {display:block;position:absolute;inset:5% 4% 16%;width:92%;height:79%;object-fit:cover;border:2px solid #e7b8c9;border-radius:6px;box-shadow:0 0 16px #ffb6bbab;}
+.game-in-play .battle-grave-flight span {position:absolute;bottom:8%;left:4%;right:4%;text-align:center;font-weight:900;font-size:clamp(9px,1.1vw,12px);color:#ffe7ed;background:#532439d8;border-radius:3px;}
+@keyframes lfGraveSend {
+  0%{opacity:0;transform:translate(0,0) scale(.92);filter:brightness(1.5);}
+  12%{opacity:1;transform:translate(0,-12px) scale(1.15);filter:brightness(1.8);}
+  28%{opacity:1;transform:translate(0,-8px) scale(1);filter:brightness(1);}
+  78%{opacity:1;transform:translate(var(--grave-x),var(--grave-y)) scale(.34) rotate(25deg);}
+  100%{opacity:0;transform:translate(var(--grave-x),var(--grave-y)) scale(.08) rotate(45deg);}
+}
+@media(prefers-reduced-motion:reduce){
+  .game-in-play .field-cell.optional-effect-source,.optional-effect-dialog,.optional-effect-used{animation:none!important;}
+  .game-in-play .battle-grave-flight,.game-in-play .battle-grave-target{display:none;}
+}
+
+/* Keep the original piece visible until the spell's card animation finishes. */
+.game-in-play .field-cell .spell-move-source-ghost {position:absolute;inset:8% 8% 22%;z-index:9;pointer-events:none;border:2px solid #e2d99b;border-radius:5px;overflow:hidden;filter:drop-shadow(0 0 7px #e0d29c99);}
+.game-in-play .field-cell .spell-move-source-ghost img{display:block;width:100%;height:100%;object-fit:cover;}
+.game-in-play .field-cell .spell-move-source-ghost.opponent-tile img{transform:rotate(180deg);}
+.game-in-play .field-cell.spell-move-destination-hidden .monster-tile,
+.game-in-play .field-cell.spell-move-destination-hidden .stats,
+.game-in-play .field-cell.spell-move-destination-hidden .equip-thumbnails{visibility:hidden;}
+@media(prefers-reduced-motion:reduce){
+  .game-in-play .field-cell .spell-move-source-ghost{display:none;}
+  .game-in-play .field-cell.spell-move-destination-hidden .monster-tile,
+  .game-in-play .field-cell.spell-move-destination-hidden .stats,
+  .game-in-play .field-cell.spell-move-destination-hidden .equip-thumbnails{visibility:visible;}
+}
+
+/* v0.19.7: base card value vs. effective ATK / DEF on the battlefield.
+   Only the number is colored; the underlying combat calculation is unchanged. */
+.game-in-play .field-cell .stats .stat-number {
+  color: #f2f5f6;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  transition: color .18s ease;
+}
+.game-in-play .field-cell .stats .stat-number.stat-buffed {
+  color: #90f5ad;
+  text-shadow: 0 0 5px #20e46b8c, 0 1px 2px #06190c;
+}
+.game-in-play .field-cell .stats .stat-number.stat-debuffed {
+  color: #ff989b;
+  text-shadow: 0 0 5px #f14e548c, 0 1px 2px #250709;
+}
+
+
+/* v0.19.8: required-territory badges only express the territory-count condition.
+   Other play conditions (phase, target, element) are checked by the game rules. */
+.game-in-play .hand-card { position:relative; }
+.territory-badge {
+  position:absolute; z-index:6; top:3px; left:3px;
+  box-sizing:border-box; max-width:calc(100% - 6px);
+  display:inline-flex; justify-content:center; align-items:center;
+  padding:3px 4px; border:1px solid #dbbd79; border-radius:4px;
+  background:#223343f0; color:#ffe2a3; box-shadow:0 1px 5px #06131bc4;
+  font-size:10px; line-height:1; font-weight:900; white-space:nowrap;
+  letter-spacing:-.025em; font-variant-numeric:tabular-nums; pointer-events:none;
+}
+.game-in-play .hand-card .territory-badge { top:3px; left:3px; font-size:10px; }
+.game-in-play .hand-card .territory-badge-met {
+  color:#d6ffdc; background:#16543aeb; border-color:#6be8a2;
+  text-shadow:0 1px 2px #06160c;
+}
+.game-in-play .hand-card .territory-badge-short {
+  color:#ffe1cb; background:#65362eeb; border-color:#f49c82;
+  text-shadow:0 1px 2px #2c1008;
+}
+.territory-hand-summary { display:inline-flex; flex-wrap:wrap; align-items:center; gap:7px; color:#f5d99a !important; }
+.territory-hand-summary small { font-size:10px; color:#b7c9c5; }
+.mulligan-card .territory-badge { top:4px; left:4px; font-size:10px; }
+.deck-library-card .territory-badge-deck { top:9px; left:9px; font-size:11px; }
+.deck-required-territories { padding:7px 10px; border-left:3px solid #e5c77c; background:#203d47; color:#f5d79c; }
+.game-in-play .focus-description > .territory-progress {
+  display:flex; flex-direction:column; gap:4px; padding:8px 10px;
+  background:#153c35; border:1px solid #4ca77a; border-radius:7px;
+  color:#d3f8d8; line-height:1.35;
+}
+.game-in-play .focus-description > .territory-progress-short { background:#462e2d; border-color:#d68a74; color:#ffe1ca; }
+.game-in-play .territory-progress .territory-progress-title { font-size:13px; font-weight:900; color:inherit; }
+.game-in-play .territory-progress .territory-progress-status { font-size:11px; color:inherit; }
+@media(max-width:660px) {
+  .territory-hand-summary { gap:4px; }
+  .territory-hand-summary small { display:none; }
+  .game-in-play .hand-card .territory-badge { font-size:9px; padding:3px; }
+  .deck-library-card .territory-badge-deck {font-size:9px;top:5px;left:5px;}
+  .mulligan-card .territory-badge {font-size:9px;}
+}
+
+/* ==============================================================
+   v0.20.0  ANCIENT FRONTIER : stone board + restrained bronze UI.
+   Design-only overrides. Do not alter play rules or priority cues.
+   =============================================================== */
+:root {
+  --lf-bronze: #b69765;
+  --lf-gold: #f0d69d;
+  --lf-parchment: #ecdfc3;
+  --lf-ink: #141e24;
+}
+.home-screen, .deck-library-page, .game-in-play {
+  background-color: #141a1c;
+  background-image:
+    radial-gradient(ellipse 75% 85% at 50% 10%, #48504443, transparent 73%),
+    repeating-linear-gradient(145deg, #bd995f08 0px, #bd995f08 1px, transparent 1px, transparent 85px),
+    linear-gradient(160deg, #1e292b, #11191d 65%, #171c1b);
+}
+/* Stone image supplied by the creator. Texture belongs to the board,
+   not to each territory illustration, which stays vivid. */
+.game-in-play .field-panel {
+  overflow: visible;
+  border: 1px solid #a8895e;
+  background: linear-gradient(145deg, #33332ae8, #17252a 65%);
+  box-shadow: 0 10px 36px #0009, inset 0 0 0 3px #181d1b, inset 0 0 0 4px #9d754a6d;
+}
+.game-in-play .field-panel::before {
+  background: linear-gradient(90deg, #b4976014, transparent 30%, transparent 75%, #b4976016);
+}
+.game-in-play .board-grid {
+  isolation: isolate;
+  padding: clamp(10px,1.65vw,18px);
+  border: 3px double #b99b6c;
+  border-radius: 6px;
+  background-image:
+    linear-gradient(150deg, #1a130c4a, #160f0b65),
+    var(--lf-stone);
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: 0 6px 24px #0009, inset 0 0 0 2px #24170fe0, inset 0 0 35px #0b0e0bbd;
+}
+.game-in-play .field-cell {
+  border-radius: 3px;
+  border: 1px solid #aa8e68a6;
+  background:
+    linear-gradient(160deg, #473b30a2, #191916b5),
+    var(--lf-stone) center / 320% 320%;
+  box-shadow: inset 0 1px 0 #e0c8a341, inset 0 0 10px #0a0807ba, 0 1px 4px #000a;
+}
+.game-in-play .field-cell:not(.has-territory):not(.castle1):not(.castle2)::after {
+  background: linear-gradient(145deg, #fff4d408, #08090867);
+}
+.game-in-play .field-cell.has-territory {
+  background: #121d19;
+  border-color: #a58c65;
+  box-shadow: inset 0 0 0 1px #dfc69136, 0 2px 8px #070c0ab0;
+}
+.game-in-play .field-cell.has-territory .territory-tile img {
+  filter: saturate(1.06) contrast(1.025);
+}
+.game-in-play .field-cell:hover {border-color: #f9d994; filter: brightness(1.12);}
+/* Preserve existing green/yellow/blue targeting and optional-effect rings. */
+.game-in-play .field-cell.valid-placement {outline-color:#9de5a5; box-shadow: 0 0 0 2px #326846a8,0 0 13px #8aef9d75;}
+.game-in-play .field-cell.inspected:not(.valid-placement):not(.valid-move):not(.valid-magic) {outline: 2px solid #ecca85; outline-offset: 1px;}
+.game-in-play .field-cell.castle1, .game-in-play .field-cell.castle2 {background:linear-gradient(155deg,#46372b,#1b211f);border-color:#d8bb84;}
+/* A castle is the original card back, stacked. No invented fortresses. */
+.game-in-play .castle-tile {
+  z-index: 6; inset: 0; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:0;
+  background: radial-gradient(ellipse at 50% 55%, #e4bf7175, #17171333 62%, #080b0b94 94%);
+}
+.game-in-play .castle-card-stack {
+  /* LF-card.jpg は横長の裏面。画像全体を切らずに重ねる。 */
+  position:relative; display:block; flex-shrink:0;
+  width:84%; height:auto; aspect-ratio:1545 / 1060;
+  filter:drop-shadow(0 5px 5px #000a);
+}
+.game-in-play .castle-card-layer, .game-in-play .castle-card-face {
+  position:absolute; inset:0; width:100%; height:100%; border-radius:3px;
+  object-fit:contain; border:1px solid #e9d0a3; box-shadow:0 2px 4px #000c;
+}
+.game-in-play .castle-card-layer-back {transform:translate(-7%,6%) rotate(-6deg);filter:brightness(.66);}
+.game-in-play .castle-card-layer-middle {transform:translate(5%,-4%) rotate(4deg);filter:brightness(.83);}
+.game-in-play .castle-card-face {transform:translate(0,0);}
+.game-in-play .castle-tile::before {
+  content:'';position:absolute;width:82%;height:16%;left:9%;bottom:9%;
+  border-radius:50%;background:#e6c57b53;filter:blur(9px);pointer-events:none;
+}
+.game-in-play .castle-icon {display:none;}
+.game-in-play .castle-word {
+  position:absolute;z-index:9;bottom:1px;left:50%;transform:translateX(-50%);
+  font-size:clamp(8px,.76vw,10px);font-weight:900;color:#ffe5af;
+  text-align:center;white-space:nowrap;letter-spacing:0;
+  background:#101713dd;border:1px solid #c09c697d;border-radius:3px;padding:1px 3px;
+  text-shadow:0 1px 3px #000;
+}
+/* Card-back animation follows the actual board castle to the newly drawn hand card. */
+.deck-draw-flight {
+  position:fixed;z-index:135;pointer-events:none;object-fit:cover;border-radius:5px;
+  border:2px solid #e6c487;box-shadow:0 5px 20px #000c,0 0 11px #e5b6688c;
+  transform-origin:center;animation:lfDeckDrawFly .76s cubic-bezier(.2,.65,.17,1) var(--draw-delay) both;
+}
+@keyframes lfDeckDrawFly {
+  0%{opacity:0;transform:translate(0,0) rotate(-13deg) scale(.85);}
+  13%{opacity:1;transform:translate(0,-16px) rotate(-13deg) scale(1.08);}
+  52%{opacity:1;transform:translate(calc(var(--draw-x) * .5),calc(var(--draw-y) * .40 - 18px)) rotate(9deg) scale(1.03);}
+  85%{opacity:1;transform:translate(var(--draw-x),var(--draw-y)) rotate(0) scale(.98);}
+  100%{opacity:0;transform:translate(var(--draw-x),var(--draw-y)) rotate(0) scale(.9);}
+}
+/* マリガン画面では山札を置かず、手札7枚の配布・整列のみ見せる。 */
+/* Shared frame vocabulary: antique bronze edging, quiet insets and legible content. */
+.game-in-play .hand-panel {
+  background:
+    repeating-linear-gradient(0deg,#d8b98706 0px,#d8b98706 1px,transparent 1px,transparent 17px),
+    linear-gradient(150deg,#312d27,#191f20 75%);
+  border-color:#9b8059;
+  box-shadow:0 8px 25px #0009,inset 0 0 0 1px #d8b77c25;
+}
+.game-in-play .hand-phase-controls {
+  background:linear-gradient(120deg,#282b29,#37372c 40%,#242b29);
+  border:1px solid #8b7554;box-shadow:inset 0 1px 0 #e4cd9c1c;
+}
+.game-in-play .phase-next,.deck-library-page .phase-next {
+  border:1px solid #d8b878;
+  border-radius:7px;
+  background:linear-gradient(170deg,#f2d898,#bd9253 60%,#937044);
+  color:#202521;box-shadow:inset 0 1px 0 #fff3ccbc,0 3px 12px #0009;
+  text-shadow:0 1px 0 #fff8dc5c;
+}
+.game-in-play .phase-next:disabled {filter:grayscale(.65);box-shadow:inset 0 1px 0 #fff3cc20;}
+.game-in-play .phase-track-item.current {border-color:#ddc185;}
+.game-in-play .phase-track-item.current .phase-track-dot {background:#e9c582;color:#242019;}
+.game-in-play .hand-card {border-color:#8d795a;background:#221f1c;box-shadow:0 3px 12px #0008;}
+.game-in-play .hand-card.selected-card {border-color:#f4d597;}
+.game-in-play .side-panel .panel-card {
+  background:linear-gradient(158deg,#292d29,#182729 72%,#1b2527);
+  border:1px solid #927856;
+  box-shadow:0 9px 26px #0008,inset 0 1px 0 #f5dfaf19;
+}
+.game-in-play .side-panel .panel-title h2 {color:#f2dbac;}
+.game-in-play .side-panel .focus-panel {
+  background:
+    linear-gradient(145deg,#1c2728eb,#1c2928f5),
+    var(--lf-stone) center/cover;
+}
+.game-in-play .focus-description strong {color:#f6e1bc;}
+.game-in-play .focus-description p {color:#e7dfc9;}
+.game-in-play .side-panel .panel-title {border-bottom:1px solid #aa916149;padding-bottom:7px;margin-bottom:8px;}
+.game-in-play .small-btn {background:linear-gradient(140deg,#343d3b,#242a2b);border:1px solid #987c57;color:#f3e2c1;}
+.game-in-play .small-btn:hover {background:#403d34;border-color:#d9bb83;}
+.game-in-play .status-bar {background:linear-gradient(110deg,#292e2c,#1d2b2f);border-color:#8c785b;}
+.game-in-play .notice {background:linear-gradient(90deg,#32332a,#1d2829);border-left-color:#dab777;}
+/* Collection: differentiated attribute tabs and card-first reading. */
+.deck-library-page .deck-library {
+  background:
+    linear-gradient(145deg,#192729ef,#1a2325f4),
+    var(--lf-stone) center/cover;
+  border:1px solid #ab8a5d;
+  box-shadow:0 16px 45px #0009,inset 0 0 0 3px #222b2b,inset 0 0 0 4px #bd98644a;
+}
+.deck-library-page .deck-library-tabs button {border:1px solid #987b54;background:linear-gradient(140deg,#413d32,#242c2c);color:#f3e3bb;}
+.deck-library-page .deck-library-tabs button:nth-child(1){border-bottom-color:#bd7158;}
+.deck-library-page .deck-library-tabs button:nth-child(2){border-bottom-color:#8aba8b;}
+.deck-library-page .deck-library-tabs button:nth-child(3){border-bottom-color:#76a9bb;}
+.deck-library-page .deck-library-tabs button.active {color:#211d18;border-color:#f0d59d;background:linear-gradient(160deg,#f3dba7,#bd9660);}
+.deck-library-page .deck-library-card {background:linear-gradient(145deg,#292d2a,#171f21);border-color:#8b7454;}
+.deck-library-page .deck-library-card.active {outline-color:#f1d494;}
+.deck-library-page .deck-library-detail {background:linear-gradient(140deg,#2c2c29,#1b2525);border-color:#b19770;box-shadow:0 8px 25px #0008;}
+/* Homepage: cinematic world map feeling without burying the real logo or controls. */
+.home-screen::before {
+  content:'';position:absolute;inset:0;height:100%;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 50% 24%,transparent 15%,#090f11dc 85%),
+    linear-gradient(#131f218f,#0c171ac9),
+    var(--lf-stone) center/cover;
+  opacity:.43;filter:none;
+}
+.home-screen::after {content:'';position:absolute;inset:15% 3% auto; height:60%;pointer-events:none;border-top:1px solid #dfbc7d29;border-bottom:1px solid #dfbc7d20;}
+.home-screen .home-hero {
+  max-width:890px; padding:clamp(17px,3.3vw,38px) clamp(16px,4vw,48px);
+  margin-top:clamp(15px,2.8vh,39px);
+  border:1px solid #b79a6870;border-radius:8px;
+  background:linear-gradient(150deg,#1a2426ca,#152327cb 70%,#2d2b25b8);
+  box-shadow:0 18px 60px #0009,inset 0 0 0 3px #1b2225,inset 0 0 0 4px #b0925c25;
+  backdrop-filter:blur(4px);
+}
+.home-screen .home-logo-frame {border:1px solid #b79b66;box-shadow:0 10px 35px #0008,0 0 23px #bc9a5340;}
+.home-screen .home-hero h1 {color:#f8e8c5;text-shadow:0 4px 18px #000b,0 0 28px #dfb56d32;}
+.home-screen .home-eyebrow {color:#d9b980;}
+.home-screen .home-play-online {background:linear-gradient(125deg,#edcf91,#b99054);border-color:#f0dba9;}
+.home-screen .home-play-local {background:linear-gradient(130deg,#394541,#232b2c);border-color:#b09364;}
+.home-screen .home-deck-browser-button {border-color:#a58a5b;color:#f7dfae;}
+.home-screen .home-link-list a {background:#242c2acc;border-color:#846e4e;}
+.home-screen .home-links {border-top-color:#917953;}
+/* Compact phones: maintain hand and board widths, remove only decorative padding. */
+@media(max-width:900px) {
+  .game-in-play .board-grid {padding:clamp(6px,1.4vw,12px);border-width:2px;}
+}
+@media(max-width:540px) {
+  .game-in-play .board-grid {padding:6px;gap:2px;}
+  .game-in-play .field-cell .castle-card-stack {width:88%;height:auto;aspect-ratio:1545 / 1060;}
+  .home-screen .home-hero {padding:18px 11px;}
+  .deck-library-page .deck-library {padding:12px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .deck-draw-flight {display:none;}
+}
+/* Wait for the flying card to reach the hand before revealing its face. */
+.game-in-play .hand-card.newly-drawn {animation-delay:.42s;animation-duration:.38s;}
