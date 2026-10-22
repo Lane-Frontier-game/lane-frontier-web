@@ -23,7 +23,7 @@ import { MovementArtwork } from './components/MovementArtwork'
 import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.20.1 カード束横向き調整'
+const BUILD_LABEL = 'v0.20.2 領土の所有者表示'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -1227,7 +1227,13 @@ function App() {
       <div className="game-layout">
         <section className="field-panel">
           <div className="panel-title"><h2>戦場</h2><span>{displayPlayer(owner)}視点</span></div>
-          <div className="board-orientation"><span>↑ 相手の城</span></div>
+          <div className="board-orientation">
+            <span>↑ 相手の城</span>
+            <div className="territory-owner-legend" aria-label="領土の枠色の説明">
+              <div className="legend-entry"><i className="legend-frame legend-mine" aria-hidden="true" />青：自分の領土</div>
+              <div className="legend-entry"><i className="legend-frame legend-rival" aria-hidden="true" />赤：相手の領土</div>
+            </div>
+          </div>
           <p className="instruction">
             {selectedData?.category === 'マジック' ?
               selectedCard?.cardId === 'LF-023' ? '手札から捨てるカードをクリックしてください（もう一度マジックを押すと解除）' :
@@ -1250,9 +1256,9 @@ function App() {
                 <button type="button" key={index}
                   data-board-index={index}
                   data-castle-owner={cell.castleOwner ?? undefined}
-                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? 'has-territory' : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
+                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? (cell.territory.owner === owner ? 'has-territory territory-mine' : 'has-territory territory-rival') : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
                   onClick={() => handleCellClick(index)}
-                  title={`${cell.territory ? cardName(cell.territory.cardId) : '空きマス'} ${cell.monster ? '・'+cardName(cell.monster.card.cardId) : ''}`}
+                  title={`${cell.territory ? `${cell.territory.owner === owner ? '自分' : '相手'}の領土：${cardName(cell.territory.cardId)}` : '空きマス'} ${cell.monster ? '・'+cardName(cell.monster.card.cardId) : ''}`}
                 >
                   {cell.castleOwner && <span className="castle-tile" aria-label={`${displayPlayer(cell.castleOwner)}の城`}>
                     <span className="castle-card-stack" aria-hidden="true">
@@ -1266,6 +1272,7 @@ function App() {
                     <img src={artworkImage(cell.territory.cardId)} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = cardImage(cell.territory!.cardId) }} alt={cardName(cell.territory.cardId)} />
                     <span className="territory-name">{cardName(cell.territory.cardId)}</span>
                   </span>}
+                  {cell.territory && <span className="territory-owner-frame" aria-hidden="true" />}
                   {pendingSpellMove?.from === index && effectsEnabled && <span className={`spell-move-source-ghost ${shouldRotateCard(pendingSpellMove.owner, owner) ? 'opponent-tile' : ''}`} aria-hidden="true">
                     <img src={artworkImage(pendingSpellMove.cardId)} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = cardImage(pendingSpellMove.cardId) }} alt="" />
                   </span>}

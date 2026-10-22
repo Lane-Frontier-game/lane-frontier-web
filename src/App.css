@@ -1445,3 +1445,52 @@
 }
 /* Wait for the flying card to reach the hand before revealing its face. */
 .game-in-play .hand-card.newly-drawn {animation-delay:.42s;animation-duration:.38s;}
+
+
+/* v0.20.2: Ownership is relative to the viewing player, not fixed to player1/2.
+   Keep a separate overlay above territory and monster artwork so ownership is
+   visible even if a monster or the statistics panel covers the territory. */
+.game-in-play .field-cell.territory-mine {
+  --territory-frame: #62baff;
+  --territory-glow: #419ff09c;
+}
+.game-in-play .field-cell.territory-rival {
+  --territory-frame: #ff7777;
+  --territory-glow: #eb535b9c;
+}
+.game-in-play .field-cell .territory-owner-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border: 3px solid var(--territory-frame);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px #07151bd9, inset 0 0 9px var(--territory-glow), 0 0 6px var(--territory-glow);
+  pointer-events: none;
+}
+.game-in-play .board-orientation > .territory-owner-legend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #dfebeb;
+}
+.game-in-play .territory-owner-legend .legend-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.game-in-play .territory-owner-legend .legend-frame {
+  display: inline-block;
+  width: 11px;
+  height: 13px;
+  border: 3px solid;
+  border-radius: 2px;
+  background: #34433d;
+  box-shadow: 0 0 5px currentColor;
+}
+.game-in-play .territory-owner-legend .legend-mine { color: #62baff; }
+.game-in-play .territory-owner-legend .legend-rival { color: #ff7777; }
