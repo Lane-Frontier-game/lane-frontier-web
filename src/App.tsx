@@ -23,7 +23,7 @@ import { MovementArtwork } from './components/MovementArtwork'
 import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.20.2 領土の所有者表示'
+const BUILD_LABEL = 'v0.20.4 相手ターンの手札確認対応'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -1234,7 +1234,7 @@ function App() {
               <div className="legend-entry"><i className="legend-frame legend-rival" aria-hidden="true" />赤：相手の領土</div>
             </div>
           </div>
-          <p className="instruction">
+          <p className="instruction"><span className="instruction-label">次の操作</span>
             {selectedData?.category === 'マジック' ?
               selectedCard?.cardId === 'LF-023' ? '手札から捨てるカードをクリックしてください（もう一度マジックを押すと解除）' :
                 `使用対象をクリック：${cardName(selectedCard?.cardId ?? '')}（水色の「対象」を選択）` :
@@ -1343,7 +1343,9 @@ function App() {
         <div className="hand-list">
           {sortedHand.map(card => (
             <button type="button" key={card.instanceId} data-hand-instance={card.instanceId} onClick={() => {
-              if (onlineMode && (!isMyTurn || online.busy)) return
+              // 自分の手札を「見る」操作は相手のターンでも許可する。
+              // 進行中の通信やターン判定による使用制限は、カード使用側で維持する。
+              if (onlineMode && isMyTurn && online.busy) return
               if (discardingForOcean && selectedCard && card.instanceId !== selectedCard.instanceId) {
                 useMagic(selectedCard, { discardInstanceId: card.instanceId }); return
               }
@@ -1359,7 +1361,7 @@ function App() {
           ))}
         </div>
         <div className="hand-actions">
-          <span>{discardingForOcean ? '大海の恵み：捨てるカードを手札から選んでください' : selectedCard ? `選択中：${cardName(selectedCard.cardId)}（${cardInfo(selectedCard.cardId)?.category}）` : '手札を選ぶと、右側にカード情報が表示されます'}</span>
+          <span className={selectedCard || discardingForOcean ? 'hand-selection-active' : 'hand-selection-hint'}>{discardingForOcean ? '大海の恵み：捨てるカードを手札から選んでください' : selectedCard ? `${onlineMode && !isMyTurn ? '確認中' : '選択中'}：${cardName(selectedCard.cardId)}（${cardInfo(selectedCard.cardId)?.category}）` : '手札を選ぶと、右側にカード情報が表示されます'}</span>
           <span>城 {player.deck.length}枚 ・ 墓地 {player.graveyard.length}枚</span>
         </div>
       </section>
@@ -1384,7 +1386,7 @@ function App() {
             <div className="opponent-hand-summary"><span>相手の手札</span><strong>{opponent.hand.length}<small>枚</small></strong><span>通常移動：{game.moveUsedThisTurn ? '実行済み' : '未実行'}</span></div>
           </div>
           <div className="panel-card focus-panel">
-            <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
+            <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? onlineMode && !isMyTurn ? '手札の内容を確認中' : '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
             {(selectedCard || inspectedCard) ? (() => {
               const focused = selectedCard ?? inspectedCard!
               const data = cardInfo(focused.cardId)

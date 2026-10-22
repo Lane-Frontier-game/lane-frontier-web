@@ -1494,3 +1494,147 @@
 }
 .game-in-play .territory-owner-legend .legend-mine { color: #62baff; }
 .game-in-play .territory-owner-legend .legend-rival { color: #ff7777; }
+
+
+/* v0.20.3 — Operation readability pass.
+   Change only appearance and labels. Card/board logic and multiplayer remain intact.
+   Keep the bronze/stone visual language; prioritize actions and reading contrast. */
+.game-in-play .panel-title h2,
+.game-in-play .side-panel .panel-card h2 {
+  font-size: 17px;
+  line-height: 1.4;
+  letter-spacing: .035em;
+}
+.game-in-play .panel-title span { font-size: 12px; line-height: 1.4; }
+.game-in-play .board-orientation { font-size: 12px; }
+.game-in-play .board-orientation > .territory-owner-legend {
+  font-size: 11px;
+  line-height: 1.35;
+}
+.game-in-play .instruction {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 9px;
+  row-gap: 4px;
+  min-height: 38px;
+  margin: 5px 0 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: #f6f1df;
+  background: linear-gradient(100deg, #263b3c, #172b2c);
+  border: 1px solid #86704c;
+  border-left: 4px solid #dfb672;
+  border-radius: 6px;
+}
+.game-in-play .instruction .instruction-label {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  color: #fce3ab;
+  background: #65512e;
+  border: 1px solid #9d7d48;
+  border-radius: 4px;
+}
+.game-in-play .board-hint { font-size: 12px; color: #d7d0bc; }
+.game-in-play .hand-panel { padding-block: 10px; }
+.game-in-play .hand-panel .count-label { font-size: 14px; font-weight: 750; }
+.game-in-play .hand-phase-controls {
+  min-height: 49px;
+  padding: 7px 10px;
+  gap: 8px 12px;
+  border-color: #b4955f;
+  background: linear-gradient(110deg, #3a372d, #29362f);
+  box-shadow: inset 0 1px 0 #f8e0ad20;
+}
+.game-in-play .hand-phase-label { row-gap: 3px; }
+.game-in-play .hand-phase-label strong {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #fff1d4;
+}
+.game-in-play .hand-phase-label span {
+  font-size: 12px;
+  color: #e7e8d7;
+  line-height: 1.4;
+}
+.game-in-play .phase-next.hand-phase-next {
+  min-height: 43px;
+  padding: 9px 15px;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.35;
+  letter-spacing: .01em;
+  color: #211b13;
+  background: linear-gradient(160deg, #ffe5ac, #ddae64 64%, #c18c47);
+  border: 2px solid #f6d49b;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 #fff2ca, 0 2px 12px #080c0b7d;
+  opacity: 1;
+  filter: none;
+  transition: filter .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.game-in-play .phase-next.hand-phase-next:not(:disabled) { cursor: pointer; }
+.game-in-play .phase-next.hand-phase-next:not(:disabled):hover {
+  filter: brightness(1.09);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 #fff4d8, 0 4px 16px #080c0b9d;
+}
+.game-in-play .phase-next.hand-phase-next:focus-visible {
+  outline: 3px solid #fff3d1;
+  outline-offset: 3px;
+}
+.game-in-play .phase-next.hand-phase-next:disabled {
+  color: #e0dfd4;
+  background: linear-gradient(135deg, #4a4c48, #373d3b);
+  border-color: #77786f;
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+.game-in-play .hand-actions {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d7dbcf;
+}
+.game-in-play .hand-actions .hand-selection-active {
+  font-weight: 750;
+  color: #f9dfab;
+}
+.game-in-play .hand-card.selected-card { box-shadow: 0 0 0 2px #e9c47a, 0 0 15px #dfb75c8c; }
+.game-in-play .side-panel .panel-card p,
+.game-in-play .focus-description p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.game-in-play .focus-description { gap: 7px; }
+.game-in-play .focus-description strong { font-size: 15px; line-height: 1.45; }
+.game-in-play .focus-description > span { font-size: 12px; line-height: 1.5; }
+.game-in-play .focus-description p { color: #f1ebdb; }
+.game-in-play .duel-stats small { font-size: 11px; line-height: 1.35; color: #e0e8dd; }
+.game-in-play .duel-stats strong { font-size: 21px; }
+.game-in-play .duel-substats,
+.game-in-play .opponent-hand-summary { font-size: 12px !important; }
+.game-in-play .notice { font-size: 13px; line-height: 1.55; color: #f4e8c9; }
+.game-in-play .side-panel summary { font-size: 13px; line-height: 1.45; }
+@media (max-width: 900px) {
+  .game-in-play .hand-panel { padding-block: 11px; }
+  .game-in-play .hand-phase-controls { flex-wrap: wrap; }
+  .game-in-play .hand-phase-next { margin-left: auto; }
+}
+@media (max-width: 540px) {
+  .game-in-play .instruction { font-size: 12px; line-height: 1.45; }
+  .game-in-play .hand-phase-controls { padding: 8px; }
+  .game-in-play .phase-next.hand-phase-next { width: 100%; min-height: 46px; margin: 0; }
+  .game-in-play .focus-description p { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-in-play .phase-next.hand-phase-next { transition: none; }
+  .game-in-play .phase-next.hand-phase-next:not(:disabled):hover { transform: none; }
+}
