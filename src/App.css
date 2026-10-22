@@ -1638,3 +1638,43 @@
   .game-in-play .phase-next.hand-phase-next { transition: none; }
   .game-in-play .phase-next.hand-phase-next:not(:disabled):hover { transform: none; }
 }
+
+/* v0.21.0: guided tutorial. These styles never apply to normal / online matches. */
+.home-screen .home-play-tutorial {
+  grid-column:1/-1; min-height:82px;
+  border:2px solid #e4c48a;
+  background:linear-gradient(125deg,#413f32,#243d3a);
+  color:#fff0cf;
+}
+.home-screen .home-play-tutorial .home-play-symbol {color:#ffe4a2;font-weight:900;}
+.game-in-play .tutorial-guide {
+  padding:17px clamp(13px,2vw,25px) 18px;
+  border:1px solid #d6b779;
+  border-left:5px solid #e8c881;
+  border-radius:9px;
+  background:linear-gradient(115deg,#3c3a2f,#1c3030 70%,#18272d);
+  box-shadow:0 6px 20px #0008,inset 0 1px 0 #fbe6ac26;
+  color:#f7ead0;
+}
+.tutorial-guide-top {display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px;}
+.tutorial-kicker {font-weight:800;letter-spacing:.09em;color:#dfc996;font-size:11px;}
+.tutorial-progress {font-size:12px;white-space:nowrap;color:#231e16;background:#e7ca8c;border-radius:25px;padding:5px 13px;}
+.game-in-play .tutorial-guide h2 {margin:3px 0 9px;color:#ffe6b3;font-size:clamp(17px,2.3vw,23px);line-height:1.3;}
+.game-in-play .tutorial-guide p {max-width:1000px;font-size:clamp(13px,1.45vw,15px);line-height:1.8;margin:8px 0;color:#e9e8dc;}
+.game-in-play .tutorial-guide strong {color:#ffdda0;}
+.game-in-play .tutorial-guide .tutorial-note {font-size:12px;color:#c6d2cf;}
+.game-in-play .tutorial-guide .tutorial-task {color:#fff2c7;background:#5a4a2c73;border:1px solid #c19b5e88;border-radius:7px;padding:9px 12px;}
+.game-in-play .tutorial-guide button,.game-in-play .tutorial-guide a {cursor:pointer;}
+.game-in-play .tutorial-action {display:inline-flex;align-items:center;justify-content:center;min-height:43px;margin-top:9px;padding:10px 22px;border-radius:7px;border:1px solid #efd49f;background:linear-gradient(150deg,#f5d99d,#bd9554);color:#20251e;font-weight:900;font-size:14px;text-decoration:none;}
+.game-in-play .tutorial-secondary {display:inline-flex;justify-content:center;align-items:center;min-height:43px;margin-top:9px;padding:9px 15px;border:1px solid #b5a27c;border-radius:7px;background:#283737;color:#efddba;font-weight:700;text-decoration:none;font-size:13px;}
+.game-in-play .tutorial-end-actions {display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.game-in-play .field-cell.tutorial-focus-cell {outline:3px solid #ffe18c;outline-offset:-4px;box-shadow:0 0 0 2px #efbd6b,0 0 20px #f8d3758c,inset 0 0 14px #f8d37552;z-index:2;}
+.game-in-play .tutorial-guide :is(button,a):focus-visible,.game-in-play .field-cell.tutorial-focus-cell:focus-visible {outline:3px solid #8bdbff;outline-offset:2px;}
+@media(max-width:540px) {
+  .game-in-play .tutorial-guide {padding:11px;}
+  .game-in-play .tutorial-guide p {font-size:13px;line-height:1.65;}
+  .game-in-play .tutorial-kicker {font-size:10px;}
+  .game-in-play .tutorial-progress {padding:4px 8px;}
+  .game-in-play .tutorial-end-actions > * {flex:1 1 100%;}
+}
+@media(prefers-reduced-motion:reduce) {.game-in-play .field-cell.tutorial-focus-cell {animation:none !important;}}

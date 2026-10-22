@@ -6,8 +6,8 @@ import { castMagic, magicTargetIndices } from './game/magic'
 import { offerOgreAdvance, offerSummonEffect, resolveOptionalMonsterEffect, resolvePrakilorusSummonBattle } from './game/monsterEffects'
 import {
   adjacent, attackAt, canMoveNow, cardImage, cardInfo, cardName,
-  COLS, defenseAt, drawCards, legalMoves, moveAndBattle, offsetTarget,
-  otherPlayer, ownElementTerritoryCount, territoryCount, validDestination,
+  defenseAt, drawCards, legalMoves, moveAndBattle, offsetTarget,
+  otherPlayer, territoryCount,
 } from './game/logic'
 import { createInitialGameState } from './game/initialState'
 import { DECK_ELEMENTS, createGameWithDecks, deckRecipe } from './game/decks'
@@ -21,9 +21,11 @@ import { useOnlineRoom } from './online/useOnlineRoom'
 import { artworkImage } from './artworkManifest'
 import { MovementArtwork } from './components/MovementArtwork'
 import { isOnlineConfigured } from './online/config'
+import { createTutorialGame, TUTORIAL } from './game/tutorial'
+import type { TutorialStep } from './game/tutorial'
 import './App.css'
 
-const BUILD_LABEL = 'v0.20.4 相手ターンの手札確認対応'
+const BUILD_LABEL = 'v0.21.0 体験型チュートリアル'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -93,8 +95,9 @@ function snapshot(state: GameState): ViewSnapshot {
 
 function App() {
   const [game, setGameLocal] = useState<GameState>(createInitialGameState)
-  const [screen, setScreen] = useState<'home' | 'local' | 'online' | 'decks'>('home')
+  const [screen, setScreen] = useState<'home' | 'local' | 'online' | 'decks' | 'tutorial'>('home')
   const [onlineMode, setOnlineMode] = useState(false)
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>('intro')
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const online = useOnlineRoom()
   const [started, setStarted] = useState(false)
@@ -487,6 +490,15 @@ function App() {
       next = offerSummonEffect(next, index)
       if (next.pendingEffect) placementMessage += ' ／ 右側で任意効果を選択してください'
     }
+    if (screen === 'tutorial' && tutorialStep === 'land' && index === TUTORIAL.landIndex &&
+        card.cardId === TUTORIAL.landCardId && isTerritory) {
+      // 通常対戦で自動進行する開拓完了後のメイン移行だけ、この教材でも再現。
+      next = { ...next, phase: 'main' }
+      setTutorialStep('summon')
+    } else if (screen === 'tutorial' && tutorialStep === 'summon' &&
+               index === TUTORIAL.landIndex && card.cardId === TUTORIAL.monsterCardId && isMainAction) {
+      setTutorialStep('move-intro')
+    }
     const settled = next
     if (specialBattle) specialBattleTargetRef.current = index
     setGame(settled)
@@ -497,6 +509,28 @@ function App() {
   }
 
   function handleCellClick(index: number) {
+    if (screen === 'tutorial') {
+      if (tutorialStep === 'intro' || tutorialStep === 'move-intro' || tutorialStep === 'complete') {
+        setInspect(index)
+        return
+      }
+      if (tutorialStep === 'land' && selectedCard && selectedCard.cardId !== TUTORIAL.landCardId) {
+        setMessage('まず「焦土」を選んで領土を配置しましょう。')
+        return
+      }
+      if (tutorialStep === 'summon' && selectedCard && selectedCard.cardId !== TUTORIAL.monsterCardId) {
+        setMessage('次は「サラマンダー」を選んで召喚しましょう。')
+        return
+      }
+      if ((tutorialStep === 'land' || tutorialStep === 'summon') && selectedCard && index !== TUTORIAL.landIndex) {
+        setMessage('練習では光るマスを使います。通常対戦ではルール上配置可能なマスを自由に選べます。')
+        return
+      }
+      if (tutorialStep === 'move' && index !== TUTORIAL.landIndex && index !== TUTORIAL.enemyIndex) {
+        setMessage('練習ではサラマンダーを選び、目の前の敵がいるマスへ進めてください。')
+        return
+      }
+    }
     if (onlineMode && (!isMyTurn || online.busy)) {
       setInspect(index)
       setInspectedEquipmentId(null)
@@ -522,6 +556,10 @@ function App() {
         const after = offerOgreAdvance(result.game, index, result.attackerWon)
         const settled = after
         setGame(settled)
+        if (screen === 'tutorial' && tutorialStep === 'move' &&
+            movingFrom === TUTORIAL.landIndex && index === TUTORIAL.enemyIndex) {
+          setTutorialStep('complete')
+        }
         setMessage(result.message + (after.pendingEffect ? ' ／ 右側で追加前進するか選んでください' : ''))
         setInspect(settled.activePlayer !== game.activePlayer ? null : index)
         setMovingFrom(null)
@@ -549,6 +587,7 @@ function App() {
   }
 
   function nextPhase() {
+    if (screen === 'tutorial') return
     if (!isMyTurn || online.busy || phaseLockRef.current) return
     if (game.winner || pendingEquip || game.pendingEffect) { setMessage('先に装備またはモンスターの任意効果を選んでください'); return }
     let next: GameState
@@ -860,7 +899,7 @@ function App() {
   useEffect(() => {
     const key = `${game.turn}/${game.activePlayer}/${game.phase}`
     if (phaseClock.current.key !== key) phaseClock.current = { key, at: Date.now() }
-    if (!started || setupStage !== 'play' || !isMyTurn || online.busy || game.winner || pendingEquip || game.pendingEffect || phaseLocked || phaseLockRef.current) return
+    if (screen === 'tutorial' || !started || setupStage !== 'play' || !isMyTurn || online.busy || game.winner || pendingEquip || game.pendingEffect || phaseLocked || phaseLockRef.current) return
     if (onlineMode && online.room?.stage !== 'playing') return
     const auto = game.phase === 'start' || game.phase === 'draw' || game.phase === 'end'
       || (game.phase === 'develop' && game.territoryPlayedThisTurn)
@@ -871,7 +910,7 @@ function App() {
     const timer = window.setTimeout(() => nextPhase(), delay)
     return () => window.clearTimeout(timer)
   }, [started, setupStage, game.phase, game.turn, game.activePlayer, game.territoryPlayedThisTurn, game.moveUsedThisTurn,
-    game.winner, game.pendingEffect, pendingEquip, isMyTurn, online.busy, onlineMode, online.room?.stage, online.room?.version, phaseLocked])
+    game.winner, game.pendingEffect, pendingEquip, isMyTurn, online.busy, onlineMode, online.room?.stage, online.room?.version, phaseLocked, screen])
 
   function newGame() {
     if (onlineMode) return
@@ -918,6 +957,7 @@ function App() {
   }
 
   function goHome() {
+    setTutorialStep('intro')
     online.leave()
     setOnlineMode(false)
     setScreen('home')
@@ -937,6 +977,33 @@ function App() {
     if (delayedVictoryTimer.current !== null) window.clearTimeout(delayedVictoryTimer.current)
     delayedVictoryTimer.current = null
     previousSnapshot.current = null
+  }
+
+  function openTutorial() {
+    goHome()
+    setOnlineMode(false)
+    setScreen('tutorial')
+    setGameLocal(createTutorialGame())
+    setDeckChoices({ player1: '火', player2: '水' })
+    setStarted(true)
+    setSetupStage('play')
+    setTutorialStep('intro')
+    setMessage('まずは説明を読んで、体験を始めましょう。')
+  }
+
+  function advanceTutorial() {
+    if (screen !== 'tutorial') return
+    if (tutorialStep === 'intro') {
+      setTutorialStep('land')
+      setMessage('手札の「焦土」をクリックし、光るマスに配置してください。')
+    } else if (tutorialStep === 'move-intro') {
+      // 召喚ターンおよび相手の手番を省略し、次の自分の移動フェイズを見せる。
+      setGameLocal(prev => ({ ...prev, turn: prev.turn + 2, phase: 'move',
+        territoryPlayedThisTurn: false, mainActionUsedThisTurn: false, moveUsedThisTurn: false }))
+      setTutorialStep('move')
+      resetSelection()
+      setMessage('サラマンダーを選び、黄色く表示される相手モンスターのマスへ移動してください。')
+    }
   }
 
   function openLocalMatch() {
@@ -972,6 +1039,11 @@ function App() {
         <h1 id="home-title">レーンフロンティア</h1>
         <p className="home-subtitle">領土を切り拓き、戦場を進め。</p>
         <div className="home-game-actions">
+          <button type="button" className="home-play-button home-play-tutorial" onClick={openTutorial}>
+            <span className="home-play-symbol" aria-hidden="true">?</span>
+            <span><strong>遊び方を体験</strong><small>紙版のルールも操作しながら学ぶ</small></span>
+            <span className="home-play-arrow" aria-hidden="true">→</span>
+          </button>
           <button type="button" className="home-play-button home-play-online" onClick={openOnlineMatch}>
             <span className="home-play-symbol" aria-hidden="true">↗</span>
             <span><strong>オンライン対戦</strong><small>別々の端末で遊ぶ</small></span>
@@ -1198,7 +1270,8 @@ function App() {
         <div className="game-header-actions">
           <button type="button" className="small-btn visual-toggle" aria-pressed={effectsEnabled} onClick={() => { setEffectsEnabled(v => !v); setVisualCue(null); clearBoardMove() }}>{effectsEnabled ? '演出 ON' : '演出 OFF'}</button>
           <button type="button" className="small-btn" onClick={goHome}>ホーム</button>
-          {onlineMode ? <button type="button" className="small-btn" onClick={goHome}>部屋を退出</button> : <>
+          {onlineMode ? <button type="button" className="small-btn" onClick={goHome}>部屋を退出</button> : screen === 'tutorial' ?
+            <button type="button" className="small-btn" onClick={openTutorial}>最初からやり直す</button> : <>
             <button type="button" className="small-btn" onClick={changeDecks}>デッキ変更</button>
             <button type="button" className="small-btn" onClick={newGame}>再戦</button>
           </>}
@@ -1212,6 +1285,51 @@ function App() {
         <span className="opponent-hand-pill">相手の手札 <strong>{opponent.hand.length}枚</strong></span>
         <span className="status-deck">{deckChoices[owner]}デッキ vs {deckChoices[otherPlayer(owner)]}デッキ</span>
       </div>
+      {screen === 'tutorial' && <section className="tutorial-guide" aria-label="遊び方チュートリアル" aria-live="polite">
+        <div className="tutorial-guide-top">
+          <span className="tutorial-kicker">HOW TO PLAY · 紙版にも共通する基本ルール</span>
+          <strong className="tutorial-progress">{tutorialStep === 'intro' ? '準備' : tutorialStep === 'land' ? '1 / 3' : tutorialStep === 'summon' ? '2 / 3' : tutorialStep === 'move-intro' || tutorialStep === 'move' ? '3 / 3' : '完了'}</strong>
+        </div>
+        {tutorialStep === 'intro' && <>
+          <h2>領土を広げ、モンスターを進めよう</h2>
+          <p>レーンフロンティアは、城から領土を広げてモンスターを配置し、相手の城を目指すカードゲームです。まずは実際の盤面で<strong>開拓・召喚・移動と戦闘</strong>を体験しましょう。</p>
+          <p className="tutorial-note">練習用の決まった盤面から始まります。最初の準備や相手の手番は一部省略しますが、カードを置く条件と戦闘の処理は通常対戦と同じです。</p>
+          <button type="button" className="tutorial-action" onClick={advanceTutorial}>領土の配置から始める →</button>
+        </>}
+        {tutorialStep === 'land' && <>
+          <h2>① 開拓：領土を配置する</h2>
+          <p><strong>開拓フェイズ</strong>には、自分の城か自分の領土に<strong>上下左右で隣接</strong>する空きマスに、領土カードを1枚配置できます。斜めは隣接に含みません。特殊領土には、さらに同属性の自分の領土への隣接条件があります。</p>
+          <p className="tutorial-task">手札の「焦土」を選び、盤面の光るマスに配置しましょう。</p>
+          <p className="tutorial-note">光る表示はWeb版の補助機能。紙版では自分で条件を確認します。</p>
+        </>}
+        {tutorialStep === 'summon' && <>
+          <h2>② メイン：モンスターを召喚する</h2>
+          <p><strong>メインフェイズ</strong>では、自分の領土のうち、カードと<strong>属性が一致する領土</strong>にモンスターを召喚できます。必要領土数は自分が持つ領土の枚数を指します。召喚と装備は合わせて1ターンに1回です。</p>
+          <p className="tutorial-task">「サラマンダー」は必要領土数が2。今は自分の領土が2枚あるので召喚できます。手札のサラマンダーを選び、先ほど置いた「焦土」に配置しましょう。</p>
+          <p className="tutorial-note">モンスターは通常、召喚したターンには移動できません。</p>
+        </>}
+        {tutorialStep === 'move-intro' && <>
+          <h2>③ 移動：敵のいる領土へ進む</h2>
+          <p>移動できる方向は<strong>モンスターのカードに書かれた移動範囲</strong>で決まります。通常移動できるのは1ターンに1体で、移動先に敵モンスターがいると戦闘になります。</p>
+          <p>今回は召喚したターンと途中の相手の手番を省略し、次の自分の移動フェイズを体験します。</p>
+          <button type="button" className="tutorial-action" onClick={advanceTutorial}>次の自分の移動フェイズへ →</button>
+        </>}
+        {tutorialStep === 'move' && <>
+          <h2>③ 移動：モンスターを動かそう</h2>
+          <p>サラマンダーは前方へ進めます。移動先は領土のあるマスか相手の城で、敵モンスターがいるマスに移動すると<strong>攻撃側ATKと守備側DEF</strong>を比較します。</p>
+          <p className="tutorial-task">盤面のサラマンダーをクリックし、黄色い「戦闘」のマスをクリックしましょう。</p>
+        </>}
+        {tutorialStep === 'complete' && <>
+          <h2>体験完了！ 戦闘の結果を確認しよう</h2>
+          <p>今回の戦闘はサラマンダーの<strong>ATK 2</strong>と、相手モンスターの<strong>DEF 1</strong>を比較するため、攻撃側の勝利です。ATKがDEFより小さければ攻撃側が負け、等しければ相討ちになります。</p>
+          <p>さらに進軍して<strong>相手の城に到達</strong>すると勝利。城のカードが0枚になったプレイヤーは敗北です。マジック・装備・特殊領土・カード固有の効果は、公式ルールや実際の対戦で確認できます。</p>
+          <div className="tutorial-end-actions">
+            <button type="button" className="tutorial-action" onClick={goHome}>ホームに戻る →</button>
+            <button type="button" className="tutorial-secondary" onClick={openTutorial}>もう一度体験</button>
+            <a className="tutorial-secondary" href="https://lane-frontier-game.github.io/lane-frontier/rules.html" target="_blank" rel="noopener noreferrer">公式ルールを読む ↗</a>
+          </div>
+        </>}
+      </section>}
       <nav className="phase-track" aria-label="現在のフェイズ">
         {(Object.keys(PHASE_LABELS) as Array<GameState['phase']>).map((phase, i) => (
           <div key={phase} className={`phase-track-item ${phase === game.phase ? 'current' : ''} ${(Object.keys(PHASE_LABELS) as Array<GameState['phase']>).indexOf(game.phase) > i ? 'done' : ''}`}>
@@ -1256,7 +1374,7 @@ function App() {
                 <button type="button" key={index}
                   data-board-index={index}
                   data-castle-owner={cell.castleOwner ?? undefined}
-                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? (cell.territory.owner === owner ? 'has-territory territory-mine' : 'has-territory territory-rival') : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
+                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? (cell.territory.owner === owner ? 'has-territory territory-mine' : 'has-territory territory-rival') : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${screen === 'tutorial' && ((tutorialStep === 'land' || tutorialStep === 'summon') && index === TUTORIAL.landIndex || (tutorialStep === 'move' && (index === TUTORIAL.landIndex || index === TUTORIAL.enemyIndex))) ? 'tutorial-focus-cell' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
                   onClick={() => handleCellClick(index)}
                   title={`${cell.territory ? `${cell.territory.owner === owner ? '自分' : '相手'}の領土：${cardName(cell.territory.cardId)}` : '空きマス'} ${cell.monster ? '・'+cardName(cell.monster.card.cardId) : ''}`}
                 >
@@ -1281,7 +1399,7 @@ function App() {
                     <span className="monster-name">{cardName(cell.monster.card.cardId)}</span>
                   </span>}
                   {cell.monster && <span className="stats">
-                    <span><b>ATK</b> <strong className={`stat-number ${statChangeClass(currentAttack, originalStats?.attack)}`}>{currentAttack ?? '?'}</strong></span>
+                    <span><b>ATK</b> <strong className={`stat-number ${statChangeClass(currentAttack, typeof originalStats?.attack === 'number' ? originalStats.attack : null)}`}>{currentAttack ?? '?'}</strong></span>
                     <span><b>DEF</b> <strong className={`stat-number ${statChangeClass(currentDefense, originalStats?.defense)}`}>{currentDefense ?? '?'}</strong></span>
                   </span>}
                   {cell.equipments.length > 0 && <span className="equip-thumbnails" title={`装備 ${cell.equipments.map(e => cardName(e.cardId)).join(' / ')}`}>
@@ -1331,8 +1449,8 @@ function App() {
             <span>ターン {game.turn} ・ {PHASE_LABELS[game.phase]}フェイズ</span>
           </div>
           <button type="button" className="phase-next hand-phase-next" onClick={nextPhase}
-            disabled={!isMyTurn || online.busy || phaseLocked || !!game.winner || !!pendingEquip || !!game.pendingEffect}>
-            {game.phase === 'start' ? 'スタート終了 → ドロー' :
+            disabled={screen === 'tutorial' || !isMyTurn || online.busy || phaseLocked || !!game.winner || !!pendingEquip || !!game.pendingEffect}>
+            {screen === 'tutorial' ? '練習の案内に沿って進めよう' : game.phase === 'start' ? 'スタート終了 → ドロー' :
               game.phase === 'draw' ? 'ドロー終了 → 開拓' :
               game.phase === 'develop' ? '開拓終了 → メイン' :
               game.phase === 'main' ? 'メイン終了 → 移動' :
