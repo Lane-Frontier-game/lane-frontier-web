@@ -1,22 +1,25 @@
 # Lane Frontier Web（レーンフロンティア Web対戦版）
 
-オリジナルTCG「レーンフロンティア」のローカルWeb対戦版です。
+レーンフロンティアのWeb対戦版です。
 
-- 3属性の固定40枚デッキ（火・風・水）
-- 1台のPCで交代しながら対戦
-- オンライン通信対戦は未実装
+- 火・風・水の固定40枚デッキ
+- 1台で交代して遊ぶローカル対戦
+- Firebase Realtime Databaseを使用したオンライン対戦
+- カード画像、背景素材、マリガン演出などを含む
 
-## ローカル実行
+## ローカル起動
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 公開
+## GitHub Pages 公開
 
-`.github/workflows/deploy.yml` で `main` へのpush時に GitHub Pages に公開します。
-GitHubリポジトリの Settings > Pages > Source を GitHub Actions に設定してください。
-Viteの `base` は GitHub Actions 上でリポジトリ名から自動設定します。
+`.github/workflows/main.yml` により、GitHubの `main` ブランチへpushするとViteのビルドとPages公開が自動実行されます。
+GitHub リポジトリの `Settings → Pages → Build and deployment → Source` で `GitHub Actions` を選択してください。
 
-詳しい手順は `公開手順.txt` を参照してください。
+`vite.config.ts` はGitHub Actions上のリポジトリ名から公開用の `base` を設定します。
+Firebaseを使用する場合はRealtime Databaseのルールと認証・権限の適切な管理が必要です。
+
+公開バージョン表示: v0.20.1
