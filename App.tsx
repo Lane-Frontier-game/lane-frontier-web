@@ -23,7 +23,7 @@ import { MovementArtwork } from './components/MovementArtwork'
 import { isOnlineConfigured } from './online/config'
 import './App.css'
 
-const BUILD_LABEL = 'v0.20.1 カード束横向き調整'
+const BUILD_LABEL = 'v0.20.4 相手ターンの手札確認対応'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -1227,8 +1227,14 @@ function App() {
       <div className="game-layout">
         <section className="field-panel">
           <div className="panel-title"><h2>戦場</h2><span>{displayPlayer(owner)}視点</span></div>
-          <div className="board-orientation"><span>↑ 相手の城</span></div>
-          <p className="instruction">
+          <div className="board-orientation">
+            <span>↑ 相手の城</span>
+            <div className="territory-owner-legend" aria-label="領土の枠色の説明">
+              <div className="legend-entry"><i className="legend-frame legend-mine" aria-hidden="true" />青：自分の領土</div>
+              <div className="legend-entry"><i className="legend-frame legend-rival" aria-hidden="true" />赤：相手の領土</div>
+            </div>
+          </div>
+          <p className="instruction"><span className="instruction-label">次の操作</span>
             {selectedData?.category === 'マジック' ?
               selectedCard?.cardId === 'LF-023' ? '手札から捨てるカードをクリックしてください（もう一度マジックを押すと解除）' :
                 `使用対象をクリック：${cardName(selectedCard?.cardId ?? '')}（水色の「対象」を選択）` :
@@ -1250,9 +1256,9 @@ function App() {
                 <button type="button" key={index}
                   data-board-index={index}
                   data-castle-owner={cell.castleOwner ?? undefined}
-                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? 'has-territory' : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
+                  className={`field-cell ${boardMoveCue?.to === index && boardMoveCue.survives && cell.monster?.card.instanceId === boardMoveCue.instanceId ? 'move-landing-pending' : ''} ${moveImpactCells.includes(index) ? 'move-impact' : ''} ${flashCells.includes(index) ? 'just-changed' : ''} ${equipmentImpactCells.includes(index) ? 'equip-impact' : ''} ${summonCells.includes(index) ? 'summon-arriving' : ''} ${magicTargetCells.includes(index) ? 'magic-impact' : ''} ${cell.territory ? (cell.territory.owner === owner ? 'has-territory territory-mine' : 'has-territory territory-rival') : ''} ${cell.monster ? 'has-monster' : ''} ${cell.castleOwner === 'player1' ? 'castle1' : cell.castleOwner === 'player2' ? 'castle2' : ''} ${isDestination ? 'valid-move' : ''} ${isMagicTarget ? 'valid-magic' : ''} ${isPlacementTarget ? 'valid-placement' : ''} ${isSelectedMonster ? 'selected-monster' : ''} ${inspect === index ? 'inspected' : ''} ${game.pendingEffect?.cellIndex === index ? 'optional-effect-source' : ''} ${pendingSpellMove?.to === index && cell.monster?.card.instanceId === pendingSpellMove.instanceId ? 'spell-move-destination-hidden' : ''}`}
                   onClick={() => handleCellClick(index)}
-                  title={`${cell.territory ? cardName(cell.territory.cardId) : '空きマス'} ${cell.monster ? '・'+cardName(cell.monster.card.cardId) : ''}`}
+                  title={`${cell.territory ? `${cell.territory.owner === owner ? '自分' : '相手'}の領土：${cardName(cell.territory.cardId)}` : '空きマス'} ${cell.monster ? '・'+cardName(cell.monster.card.cardId) : ''}`}
                 >
                   {cell.castleOwner && <span className="castle-tile" aria-label={`${displayPlayer(cell.castleOwner)}の城`}>
                     <span className="castle-card-stack" aria-hidden="true">
@@ -1266,6 +1272,7 @@ function App() {
                     <img src={artworkImage(cell.territory.cardId)} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = cardImage(cell.territory!.cardId) }} alt={cardName(cell.territory.cardId)} />
                     <span className="territory-name">{cardName(cell.territory.cardId)}</span>
                   </span>}
+                  {cell.territory && <span className="territory-owner-frame" aria-hidden="true" />}
                   {pendingSpellMove?.from === index && effectsEnabled && <span className={`spell-move-source-ghost ${shouldRotateCard(pendingSpellMove.owner, owner) ? 'opponent-tile' : ''}`} aria-hidden="true">
                     <img src={artworkImage(pendingSpellMove.cardId)} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = cardImage(pendingSpellMove.cardId) }} alt="" />
                   </span>}
@@ -1336,7 +1343,9 @@ function App() {
         <div className="hand-list">
           {sortedHand.map(card => (
             <button type="button" key={card.instanceId} data-hand-instance={card.instanceId} onClick={() => {
-              if (onlineMode && (!isMyTurn || online.busy)) return
+              // 自分の手札を「見る」操作は相手のターンでも許可する。
+              // 進行中の通信やターン判定による使用制限は、カード使用側で維持する。
+              if (onlineMode && isMyTurn && online.busy) return
               if (discardingForOcean && selectedCard && card.instanceId !== selectedCard.instanceId) {
                 useMagic(selectedCard, { discardInstanceId: card.instanceId }); return
               }
@@ -1352,7 +1361,7 @@ function App() {
           ))}
         </div>
         <div className="hand-actions">
-          <span>{discardingForOcean ? '大海の恵み：捨てるカードを手札から選んでください' : selectedCard ? `選択中：${cardName(selectedCard.cardId)}（${cardInfo(selectedCard.cardId)?.category}）` : '手札を選ぶと、右側にカード情報が表示されます'}</span>
+          <span className={selectedCard || discardingForOcean ? 'hand-selection-active' : 'hand-selection-hint'}>{discardingForOcean ? '大海の恵み：捨てるカードを手札から選んでください' : selectedCard ? `${onlineMode && !isMyTurn ? '確認中' : '選択中'}：${cardName(selectedCard.cardId)}（${cardInfo(selectedCard.cardId)?.category}）` : '手札を選ぶと、右側にカード情報が表示されます'}</span>
           <span>城 {player.deck.length}枚 ・ 墓地 {player.graveyard.length}枚</span>
         </div>
       </section>
@@ -1377,7 +1386,7 @@ function App() {
             <div className="opponent-hand-summary"><span>相手の手札</span><strong>{opponent.hand.length}<small>枚</small></strong><span>通常移動：{game.moveUsedThisTurn ? '実行済み' : '未実行'}</span></div>
           </div>
           <div className="panel-card focus-panel">
-            <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
+            <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? onlineMode && !isMyTurn ? '手札の内容を確認中' : '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
             {(selectedCard || inspectedCard) ? (() => {
               const focused = selectedCard ?? inspectedCard!
               const data = cardInfo(focused.cardId)
