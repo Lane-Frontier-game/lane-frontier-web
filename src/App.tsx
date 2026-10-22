@@ -20,12 +20,13 @@ import type { CardInstance, GameState, PlayerId } from './game/types'
 import { useOnlineRoom } from './online/useOnlineRoom'
 import { artworkImage } from './artworkManifest'
 import { MovementArtwork } from './components/MovementArtwork'
+import { Tutorial } from './Tutorial'
 import { isOnlineConfigured } from './online/config'
 import { createTutorialGame, TUTORIAL } from './game/tutorial'
 import type { TutorialStep } from './game/tutorial'
 import './App.css'
 
-const BUILD_LABEL = 'v0.21.0 体験型チュートリアル'
+const BUILD_LABEL = 'v0.22.4 チュートリアル表示・演出改善'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -1024,6 +1025,8 @@ function App() {
     setScreen('decks')
   }
 
+  if (['tutorial'].includes(screen)) return <Tutorial onHome={goHome} />
+
   if (screen === 'home') {
     return <main className="home-screen" style={{'--lf-stone': `url("${import.meta.env.BASE_URL}artwork/board/stone-board.png")`} as CSSProperties}>
       <div className="home-glow" aria-hidden="true" />
@@ -1473,6 +1476,7 @@ function App() {
               className={`hand-card ${card.instanceId === selectedId ? 'selected-card' : ''} ${effectsEnabled && newHandCards.includes(card.instanceId) ? 'newly-drawn' : ''} ${discardingForOcean && card.instanceId !== selectedCard?.instanceId ? 'discard-candidate' : ''}`}
               title={`${cardName(card.cardId)}（${cardInfo(card.cardId)?.category}／${cardInfo(card.cardId)?.element}）${typeof cardInfo(card.cardId)?.requiredTerritories === 'number' ? `・必要領土${cardInfo(card.cardId)!.requiredTerritories}枚／現在${territoryCount(game, owner)}枚` : ''}`}>
               <img src={cardImage(card.cardId)} alt={cardName(card.cardId)} />
+              <span className="hand-card-name">{cardName(card.cardId)}</span>
               {typeof cardInfo(card.cardId)?.requiredTerritories === 'number' &&
                 <span className={`territory-badge ${territoryCount(game, owner) >= cardInfo(card.cardId)!.requiredTerritories! ? 'territory-badge-met' : 'territory-badge-short'}`}>◆ 領土{cardInfo(card.cardId)!.requiredTerritories}</span>}
             </button>
@@ -1528,7 +1532,22 @@ function App() {
                         <span className="territory-progress-status">{focused.owner === owner ? '自分' : '相手'}の領土 {controlledLands}枚 ／ {fulfilled ? '領土枚数OK' : `あと${neededLands - controlledLands}枚`}</span>
                       </span>
                     })()}
-                    <p>{data?.effectText || '効果なし'}</p>
+                    <p>{focused.cardId === 'LF-016'
+                      ? 'この装備を使用しているモンスターに、前方1マス（方向2）の移動範囲を追加する。'
+                      : data?.effectText || '効果なし'}</p>
+                    {focused.cardId === 'LF-016' && <div className="boots-range-guide">
+                      <strong>追加する移動範囲</strong>
+                      <img src={`${import.meta.env.BASE_URL}ui/wing-boots-range.png`} alt="羽付きブーツが追加する前方1マスの移動範囲図" />
+                      <small>すでに前方へ移動できるモンスターには、移動先は増えません。</small>
+                    </div>}
+                    {(data?.effectText?.includes('突撃') || data?.effectText?.includes('前進') || data?.effectText?.includes('後退')) &&
+                      <div className="keyword-glossary" aria-label="カード能力の用語解説">
+                        <strong>用語解説</strong>
+                        {data?.effectText?.includes('突撃') && <p><b>突撃：</b>召喚したターンにも、そのモンスターが通常移動できること。</p>}
+                        {data?.effectText?.includes('前進') && <p><b>前進：</b>そのモンスターから見て、前方1マス（方向2）へ移動すること。移動先に敵がいれば戦闘になります。</p>}
+                        {data?.effectText?.includes('後退') && <p><b>後退：</b>そのモンスターから見て、後方1マス（方向8）へ移動すること。移動先に敵がいれば戦闘になります。</p>}
+                      </div>}
+
                   </div>
                 </div>
                 {data?.category === 'モンスター' && <div className="movement-reference-wrapper">

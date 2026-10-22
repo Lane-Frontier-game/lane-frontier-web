@@ -1678,3 +1678,17 @@
   .game-in-play .tutorial-end-actions > * {flex:1 1 100%;}
 }
 @media(prefers-reduced-motion:reduce) {.game-in-play .field-cell.tutorial-focus-cell {animation:none !important;}}
+
+/* v0.22.0: Card names and rule explanations in normal/local/online matches. */
+.game-in-play .hand-card {display:flex;flex-direction:column;align-items:center;justify-content:flex-start;height:145px;min-height:145px;padding:3px;overflow:visible;}
+.game-in-play .hand-card > img{height:109px;max-height:109px;min-height:0;width:100%;flex:0 0 auto;object-fit:contain;}
+.game-in-play .hand-card .hand-card-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;width:100%;height:30px;text-align:center;font-size:10px;line-height:1.4;color:#f8e3b8;font-weight:800;overflow-wrap:anywhere;}
+.game-in-play .hand-card .territory-badge{z-index:3;}
+.game-in-play .keyword-glossary{border:1px solid #8e825e;background:#253634;padding:10px 12px;border-radius:8px;margin-top:8px;line-height:1.6}
+.game-in-play .keyword-glossary > strong{display:block;font-size:13px;color:#ffdea0;margin-bottom:5px}
+.game-in-play .keyword-glossary p{margin:5px 0;font-size:13px;color:#e6e9df}
+.game-in-play .keyword-glossary b{color:#f6d493}
+.game-in-play .boots-range-guide{display:grid;gap:7px;margin-top:10px;border:1px solid #8b9b7a;background:#243632;padding:10px;border-radius:9px;justify-items:start}
+.game-in-play .boots-range-guide > strong{font-size:13px;color:#f1dbaa}
+.game-in-play .boots-range-guide img{display:block;width:140px;max-width:100%;height:auto;border-radius:4px;background:#eee9df}
+.game-in-play .boots-range-guide small{font-size:12px;line-height:1.6;color:#d5ded4}
