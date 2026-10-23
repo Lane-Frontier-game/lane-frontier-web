@@ -424,8 +424,11 @@ export function Tutorial({ onHome }: { onHome: () => void }) {
           </div>
           {finished && <button className="lesson-continue" onClick={next}>{step === 'equipment' ? '次は装備後の戦闘 →' : mode === 'all' ? '次の内容へ →' : '練習を終える →'}</button>}
         </section>}
+        <nav className="lesson-mobile-jump" aria-label="練習画面内の移動">
+          <a href="#lf-lesson-board">戦場</a><a href="#lf-lesson-hand">手札・カード</a><a href="#lf-lesson-rules">ルール</a>
+        </nav>
         <div className={`lesson-workspace ${reading ? 'is-reading' : ''}`}>
-          <section className="lesson-board-panel"><div className="lesson-panel-heading"><h2>戦場</h2><small>上：相手の城 / 下：自分の城</small></div>
+          <section className="lesson-board-panel" id="lf-lesson-board"><div className="lesson-panel-heading"><h2>戦場</h2><small>上：相手の城 / 下：自分の城</small></div>
             <div className="lesson-board-grid" ref={boardRef}>{game.board.map((cell,i) => {
               const isLessonTarget = (isMoving && (selectedCell === moveOrigin ? i === moveDestination : i === moveOrigin)) ||
                 (step === 'develop' || step === 'summon' || step === 'equipment') && i === target
@@ -467,12 +470,12 @@ export function Tutorial({ onHome }: { onHome: () => void }) {
             {battleSummary && <div className="lesson-battle-result" role="status"><strong>戦闘結果の解説</strong><p>{battleSummary}</p></div>}
           </section>
           <section className="lesson-control-panel">
-            {lesson && <aside className="lesson-reference" aria-label="現在のルール説明">
+            {lesson && <aside className="lesson-reference" id="lf-lesson-rules" aria-label="現在のルール説明">
               <div className="lesson-reference-heading"><div><small>RULE GUIDE</small><h2>{currentLabel}のルール</h2></div><button type="button" onClick={() => { setOverviewOpen(false); setReading(true) }} title="大きく説明を読み直す">拡大して読む</button></div>
               <div className="lesson-rule-items">{RULE_POINTS[step as Exclude<LessonStep,'done'>].map(point =>
                 <div key={point.label} className="lesson-rule-item"><b>{point.label}</b><span>{point.text}</span></div>)}</div>
             </aside>}
-            <div className="lesson-panel-heading"><h2>手札・カード情報</h2><small>自分・相手のカードを選んで確認</small></div>
+            <div className="lesson-panel-heading" id="lf-lesson-hand"><h2>手札・カード情報</h2><small>自分・相手のカードを選んで確認</small></div>
             <div className="lesson-hand">{hand.length ? hand.map((card: CardInstance) => <button type="button" key={card.instanceId} disabled={reading} className={`lesson-hand-card ${newHandIds.includes(card.instanceId) ? 'newly-drawn' : ''} ${selectedHand === card.instanceId ? 'chosen' : ''} ${focusCards.includes(card.cardId) ? 'important' : ''} ${step === 'magic' && !reading && !finished && activeCard?.cardId === 'LF-023' && card.instanceId !== selectedHand ? 'discard-candidate' : ''}`} onClick={() => clickHand(card)}>
               <img src={cardImage(card.cardId)} alt="" /><strong>{cardName(card.cardId)}</strong>
               {step === 'magic' && !reading && !finished && activeCard?.cardId === 'LF-023' && card.instanceId !== selectedHand && <span className="lesson-discard-label">捨てるカード</span>}

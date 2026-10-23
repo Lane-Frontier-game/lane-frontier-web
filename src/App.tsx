@@ -26,7 +26,7 @@ import { createTutorialGame, TUTORIAL } from './game/tutorial'
 import type { TutorialStep } from './game/tutorial'
 import './App.css'
 
-const BUILD_LABEL = 'v0.22.4 チュートリアル表示・演出改善'
+const BUILD_LABEL = 'v0.22.5 スマホUI最適化'
 
 const PHASE_LABELS: Record<GameState['phase'], string> = {
   start: 'スタート', draw: 'ドロー', develop: '開拓', main: 'メイン', move: '移動', end: 'エンド',
@@ -1345,8 +1345,11 @@ function App() {
       {onlineMode && online.error && <div className="online-error" role="alert">{online.error}</div>}
       <div className="notice" role="status">{message}</div>
 
+      <nav className="mobile-battle-jump" aria-label="対戦画面内の移動">
+        <a href="#lf-battle-board">戦場</a><a href="#lf-battle-hand">手札</a><a href="#lf-battle-card">カード情報</a>
+      </nav>
       <div className="game-layout">
-        <section className="field-panel">
+        <section className="field-panel" id="lf-battle-board">
           <div className="panel-title"><h2>戦場</h2><span>{displayPlayer(owner)}視点</span></div>
           <div className="board-orientation">
             <span>↑ 相手の城</span>
@@ -1444,7 +1447,7 @@ function App() {
           <p className="board-hint">↓ 自分の城</p>
         </section>
 
-      <section className="hand-panel">
+      <section className="hand-panel" id="lf-battle-hand">
         <div className="panel-title"><h2>手札 <span className="count-label">{player.hand.length}枚</span></h2><span className="territory-hand-summary">◆ 自分の領土 {territoryCount(game, owner)}枚 <small>緑：条件達成 / 赤：不足</small></span></div>
         <div className="hand-phase-controls">
           <div className="hand-phase-label" aria-live="polite">
@@ -1497,7 +1500,7 @@ function App() {
               </button>
             ))}</div>
           </div>}
-          <div className="panel-card overview-panel">
+          <div className="panel-card overview-panel" id="lf-battle-overview">
             <div className="panel-title"><h2>対戦状況</h2><span>相手の手札は枚数のみ表示</span></div>
             <div className="duel-stats">
               <div><small>自分の城</small><strong>{player.deck.length}</strong><small>枚</small></div>
@@ -1507,7 +1510,7 @@ function App() {
             </div>
             <div className="opponent-hand-summary"><span>相手の手札</span><strong>{opponent.hand.length}<small>枚</small></strong><span>通常移動：{game.moveUsedThisTurn ? '実行済み' : '未実行'}</span></div>
           </div>
-          <div className="panel-card focus-panel">
+          <div className="panel-card focus-panel" id="lf-battle-card">
             <div className="panel-title"><h2>カード情報</h2><span>{selectedCard ? onlineMode && !isMyTurn ? '手札の内容を確認中' : '手札から選択中' : inspectedCell ? '戦場から選択中' : 'カードをクリック'}</span></div>
             {(selectedCard || inspectedCard) ? (() => {
               const focused = selectedCard ?? inspectedCard!

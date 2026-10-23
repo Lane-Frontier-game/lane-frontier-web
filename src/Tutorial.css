@@ -338,3 +338,133 @@
   .lesson-hand-card.discard-candidate{animation:none}
   .lesson-board-grid .battle-grave-target,.lesson-board-grid .battle-grave-flight{display:none}
 }
+/* v0.22.5 — Mobile lesson follows: action → battlefield → hand/detail → rules.
+   The paper rules remain persistently present, without a long card above the hand. */
+.lesson-mobile-jump {display:none;}
+@media (max-width:850px) {
+  .lesson-page {
+    width:100%;max-width:100%;padding:12px max(10px,env(safe-area-inset-right))
+      max(24px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+    min-height:100dvh;height:auto;overflow:visible;
+  }
+  .lesson-topbar {gap:9px;margin-bottom:10px;}
+  .lesson-topbar h1 {font-size:clamp(20px,4vw,26px);}
+  .lesson-heading {gap:8px;margin:6px auto;}
+  .lesson-heading>strong {font-size:15px;}
+  .lesson-flow {padding:9px 11px;margin:8px auto;min-height:0;gap:8px;}
+  .lesson-flow strong {font-size:15px;}
+  .lesson-flow p {font-size:11px;}
+  .lesson-pinned {
+    position:relative;top:auto;z-index:10;
+    display:grid;grid-template-columns:26px minmax(0,1fr);
+    grid-template-rows:auto;align-items:start;align-content:start;
+    gap:8px 10px;padding:10px 12px;margin:9px auto;
+    width:100%;height:auto!important;min-height:0!important;max-height:none!important;
+    border:1px solid #e1ba75;border-left:4px solid #e8be74;
+    border-radius:10px;box-shadow:0 4px 14px #0006;
+  }
+  .lesson-action-icon {grid-column:1;grid-row:1;height:25px;flex:none;width:25px;font-size:17px;}
+  .lesson-pinned>.lesson-action-main {
+    display:block!important;grid-column:2;grid-row:1;
+    width:auto;min-width:0;min-height:0;max-width:100%;flex:none!important;
+    margin:0!important;padding:0!important;align-self:start;
+  }
+  .lesson-action-main strong {display:block!important;font-size:11px;line-height:1.2;}
+  .lesson-action-main p {
+    display:block;margin:3px 0 0;font-size:clamp(13px,3.5vw,15px);
+    line-height:1.5;font-weight:700;overflow-wrap:anywhere;
+  }
+  .lesson-pinned .lesson-continue {
+    grid-column:1/-1;grid-row:auto;width:100%;min-height:43px;
+    margin-top:1px;flex:none;padding:9px 12px;white-space:normal;
+  }
+  .lesson-mobile-jump {
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+    margin:8px auto 11px;max-width:1320px;
+  }
+  .lesson-mobile-jump a {
+    display:flex;align-items:center;justify-content:center;min-height:43px;
+    padding:8px 4px;border:1px solid #947a52;border-radius:8px;
+    color:#f7dfa5;background:#253937;text-decoration:none;
+    font-size:13px;font-weight:800;touch-action:manipulation;
+  }
+  .lesson-mobile-jump a:focus-visible {outline:3px solid #ffdc88;outline-offset:2px;}
+  #lf-lesson-board,#lf-lesson-hand,#lf-lesson-rules {scroll-margin-top:15px;}
+  .lesson-workspace {display:grid;grid-template-columns:minmax(0,1fr);gap:11px;}
+  .lesson-board-panel,.lesson-control-panel {padding:10px;min-width:0;}
+  .lesson-board-grid {width:100%;max-width:min(100%,535px);padding:5px;gap:3px;}
+  .lesson-panel-heading {gap:5px;margin-bottom:9px;padding-bottom:7px;}
+  .lesson-panel-heading h2 {font-size:16px;}
+  .lesson-board-caption {gap:6px 12px;font-size:11px;}
+  .lesson-control-panel {display:flex;flex-direction:column;gap:0;}
+  /* Reorder only the tutorial side content, keeping the rules available below. */
+  .lesson-control-panel > .lesson-panel-heading {order:0;}
+  .lesson-control-panel > .lesson-hand {order:1;}
+  .lesson-control-panel > .lesson-status-bar {order:2;}
+  .lesson-control-panel > .lesson-layer-chooser {order:3;}
+  .lesson-control-panel > .lesson-card-detail {order:4;}
+  .lesson-control-panel > .lesson-rule-note {order:5;}
+  .lesson-control-panel > .lesson-boots-guide {order:6;}
+  .lesson-control-panel > .lesson-feedback {order:7;}
+  .lesson-control-panel > .lesson-reference {order:8;}
+  .lesson-control-panel > .lesson-paper-note {order:9;}
+  .lesson-control-panel .lesson-hand {
+    display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:10px;
+    width:100%;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;margin:0;padding:10px 5px 15px;
+  }
+  .lesson-hand-card {
+    flex:0 0 clamp(92px,26vw,115px);width:clamp(92px,26vw,115px);
+    min-width:0;min-height:0;padding:6px 4px;scroll-snap-align:start;
+  }
+  .lesson-hand-card img {width:100%;height:clamp(112px,30vw,139px);}
+  .lesson-hand-card strong {font-size:12px;}
+  .lesson-hand-card small {font-size:11px;}
+  .lesson-card-detail {margin-top:7px;padding:11px;}
+  .lesson-detail-heading {gap:10px;}
+  .lesson-detail-heading img {width:clamp(65px,19vw,90px);max-height:128px;}
+  .lesson-detail-heading p {font-size:12px;}
+  .lesson-reference {margin:13px 0 4px;padding:12px;}
+  .lesson-reference-heading {margin-bottom:6px;}
+  .lesson-reference-heading button {min-height:43px;font-size:12px;}
+  .lesson-rule-item {grid-template-columns:minmax(80px,.29fr) minmax(0,1fr);gap:9px;padding:9px 0;}
+  .lesson-rule-item b,.lesson-rule-item span {font-size:12px;line-height:1.55;}
+  .lesson-dialog {max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;}
+  .lesson-dialog-bottom button {min-height:46px;}
+  .lesson-done {margin:30px auto;padding:20px 14px;}
+  .lesson-done h2 {font-size:clamp(22px,5vw,28px);}
+  .lesson-menu {margin:25px auto;}
+  .lesson-menu-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+  .lesson-option {min-width:0;min-height:145px;padding:15px;}
+  .lesson-option strong {font-size:18px;overflow-wrap:anywhere;}
+  .lesson-option small {font-size:12px;}
+  .lesson-option.all {padding-top:43px;}
+}
+@media (max-width:420px) {
+  .lesson-page {padding:9px 7px max(20px,env(safe-area-inset-bottom));}
+  .lesson-topbar {align-items:start;}
+  .lesson-top-actions {gap:5px;}
+  .lesson-top-actions button,.lesson-heading button {min-height:39px;padding:7px 8px;font-size:12px;}
+  .lesson-topbar h1 {font-size:21px;}
+  .lesson-flow {flex-wrap:wrap;}
+  .lesson-flow>div {flex:1 1 155px;min-width:0;}
+  .lesson-replay-rule {margin-left:0;min-height:38px;}
+  .lesson-board-panel,.lesson-control-panel {padding:8px 7px;}
+  .lesson-board-grid {padding:3px;gap:2px;}
+  .lesson-cell .lesson-monster-label {font-size:7.5px;line-height:1.15;}
+  .lesson-monster-stats {font-size:7.5px;line-height:1.1;}
+  .lesson-board-caption {justify-content:flex-start;}
+  .lesson-status-bar {gap:4px;margin:6px 0;padding:6px;}
+  .lesson-status-bar span {font-size:11px;}
+  .lesson-reference-heading h2 {font-size:16px;}
+  .lesson-rule-item {grid-template-columns:1fr;gap:3px;}
+  .lesson-option {min-height:135px;padding:12px;}
+  .lesson-option.all {padding-top:43px;}
+  .lesson-option small {font-size:11px;}
+}
+@media (max-width:345px) {
+  .lesson-menu-grid {grid-template-columns:minmax(0,1fr);}
+  .lesson-option {min-height:110px;}
+  .lesson-detail-heading {flex-wrap:wrap;}
+}
