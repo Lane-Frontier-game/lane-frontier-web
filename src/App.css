@@ -170,7 +170,8 @@
   max-width: 1650px;
   height: 100dvh;
   min-height: 600px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1611,23 +1612,20 @@
 }
 
 
-/* v0.20.2 UI改善：交代確認・演出スキップ・凡例（見た目のみの追加）。 */
-.handover-overlay { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; background: #08141cf2; padding: 20px; }
-.handover-card { width: min(100%, 480px); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 34px 26px; border: 2px solid #e8c979; border-radius: 16px; background: linear-gradient(155deg, #1d434b, #10242c); color: #fff8e9; box-shadow: 0 20px 80px #000d; }
-.handover-kicker { font-size: 12px; letter-spacing: .35em; color: #f0ca8b; font-weight: 800; }
-.handover-card h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); color: #ffe9b0; }
-.handover-card p { margin: 0; font-size: 15px; line-height: 1.7; color: #d7e4e0; }
-.handover-start { margin: 6px 0 0; min-height: 48px; font-size: 16px; }
-.handover-home { min-height: 44px; }
-.effect-skip-button { position: fixed; right: 16px; bottom: 16px; z-index: 260; min-height: 44px; padding: 10px 16px; border: 1px solid #e8c979; border-radius: 9px; background: #10242cee; color: #ffe9b0; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 18px #000a; }
-.effect-skip-button:hover { background: #1d434b; }
-@media (prefers-reduced-motion: reduce) {
-  .handover-card { animation: none !important; }
-}
-
 /* 領土カード（横長画像）は対戦中の幅上書きより後で指定し、幅を確保する。 */
 .game-in-play .hand-card.territory-card { flex: 0 0 104px; width: 104px; }
 .game-in-play .hand-list > .hand-card.territory-card { flex: 0 0 clamp(110px, 30vw, 140px); width: clamp(110px, 30vw, 140px); }
 @media (max-width: 540px) {
   .game-in-play .hand-card.territory-card { flex: 0 0 110px; width: 110px; }
+}
+
+/* 領土の枠：自分の領土は青、相手の領土は赤（盤面で一目で分かるように太めに）。 */
+.game-in-play .field-cell .territory-owner-frame { position: absolute; inset: 0; z-index: 5; border: 3px solid transparent; border-radius: 6px; pointer-events: none; }
+.game-in-play .field-cell.territory-mine .territory-owner-frame { border-color: #3f8cff; box-shadow: inset 0 0 0 1px #bcd6ff, 0 0 10px #3f8cff66; }
+.game-in-play .field-cell.territory-rival .territory-owner-frame { border-color: #ff5a5a; box-shadow: inset 0 0 0 1px #ffc4c4, 0 0 10px #ff5a5a66; }
+
+/* 画面の高さが足りないときは1画面に閉じ込めず、ページ全体をスクロールさせる。 */
+@media (max-height: 850px) {
+  .game-in-play { height: auto; min-height: 100dvh; overflow: visible; }
+  .game-in-play .game-layout { flex: none; }
 }
