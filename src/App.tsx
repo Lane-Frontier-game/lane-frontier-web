@@ -123,6 +123,10 @@ function App() {
   const mulliganHandRef = useRef<HTMLDivElement | null>(null)
   const mulliganSortStart = useRef<Map<string, DOMRect> | null>(null)
   const [phaseLocked, setPhaseLocked] = useState(false)
+  // UI改善：盤面の向き固定・ローカル対戦の交代確認・演出スキップ用（ルール不変）。
+  const [fixedOrientation, setFixedOrientation] = useState(false)
+  const [handover, setHandover] = useState<{ player: PlayerId; after: 'turn' | 'mulligan' | 'start' } | null>(null)
+  const [pendingTurn, setPendingTurn] = useState<GameState | null>(null)
   const phaseLockRef = useRef(false)
   const phaseLockTimer = useRef<number | null>(null)
   const phaseClock = useRef({ key: '', at: Date.now() })
@@ -188,7 +192,7 @@ function App() {
   const opponent = game.players[otherPlayer(owner)]
   const selectedCard = player.hand.find(c => c.instanceId === selectedId)
   const destinations = !isMyTurn || movingFrom === null ? [] : legalMoves(game, movingFrom)
-  const boardIndices = visibleBoardIndices(owner)
+  const boardIndices = fixedOrientation ? visibleBoardIndices('player1') : visibleBoardIndices(owner)
   const selectedData = selectedCard ? cardInfo(selectedCard.cardId) : null
   const magicTargets = isMyTurn && selectedCard && selectedData?.category === 'マジック' && game.phase === 'main'
     ? magicTargetIndices(game, selectedCard.cardId, owner) : []
@@ -197,6 +201,26 @@ function App() {
   const placingTargets = isMyTurn && selectedCard && selectedData?.category !== 'マジック' && !pendingEquip
     ? placementTargets(game, selectedCard, owner) : []
   const discardingForOcean = isMyTurn && selectedCard?.cardId === 'LF-023' && game.phase === 'main'
+  // 配置条件の一文説明（次の操作欄で使う）。
+  const placementHint = !selectedCard || !selectedData ? '' : selectedData.category?.includes('領土')
+    ? '自分の城か自分の領土に上下左右で隣接する空きマスに置けます（斜めは不可）'
+    : selectedData.category === 'モンスター'
+      ? `属性が一致する自分の領土に置けます（必要領土${selectedData.requiredTerritories ?? '?'}枚）`
+      : selectedData.category === '装備'
+        ? '自分のモンスターがいる領土に置けます'
+        : ''
+  // ローカル対戦の交代確認画面。手札はこの画面の裏に隠れる。
+  const handoverDialog = handover && !onlineMode ? (
+    <div className="handover-overlay" role="dialog" aria-modal="true" aria-labelledby="handover-title">
+      <div className="handover-card">
+        <span className="handover-kicker">プレイヤー交代</span>
+        <h2 id="handover-title">{displayPlayer(handover.player)}の番です</h2>
+        <p>端末を渡してください。この画面では手札は表示されていません。</p>
+        <button type="button" className="phase-next handover-start" onClick={confirmHandover}>{displayPlayer(handover.player)}の番を始める →</button>
+        <button type="button" className="small-btn handover-home" onClick={goHome}>ホームに戻る</button>
+      </div>
+    </div>
+  ) : null
 
   // v0.15.0で保存した古い盤面も一度消す。
   useEffect(() => {
@@ -231,7 +255,43 @@ function App() {
       phaseLockTimer.current = null
       phaseLockRef.current = false
       setPhaseLocked(false)
-    }, kind === 'spellmove' ? 2800 : kind === 'spell' ? 1400 : kind === 'combat' ? 1650 : kind === 'turn' ? 1500 : kind === 'equipment' ? 1450 : kind === 'move' ? 1250 : kind === 'deploy' ? 1200 : 950)
+    }, kind === 'spellmove' ? 1400 : kind === 'spell' ? 800 : kind === 'combat' ? 1000 : kind === 'turn' ? 900 : kind === 'equipment' ? 900 : kind === 'move' ? 800 : kind === 'deploy' ? 800 : 600)
+  }
+
+  // 演出スキップ：カットイン類を消し、フェイズ進行の待ちも解除する（描画のみ）。
+  function skipEffects() {
+    setVisualCue(null)
+    setMagicCue(null)
+    setEquipmentCue(null)
+    setOptionalEffectCue(null)
+    clearBoardMove()
+    releasePhaseLock()
+  }
+
+  // ローカル対戦の交代確認：保留していた次の状態を適用する。
+  function confirmHandover() {
+    if (!handover) return
+    const target = handover
+    setHandover(null)
+    if (target.after === 'turn' && pendingTurn) {
+      const next = pendingTurn
+      setPendingTurn(null)
+      setGame(next)
+      resetSelection()
+      setInspect(null)
+      setInspectedEquipmentId(null)
+      setMessage(next.winner ? `${displayPlayer(next.winner)}の勝利！ ${next.winReason}` : `${PHASE_LABELS[next.phase]}フェイズです`)
+    } else if (target.after === 'mulligan') {
+      setMulliganPreview(null)
+      setMulliganSelected([])
+      setSetupStage(target.player)
+      setMessage(`${displayPlayer(target.player)}のマリガンです`)
+    } else {
+      setMulliganPreview(null)
+      setMulliganSelected([])
+      setSetupStage('play')
+      setMessage(`${PHASE_LABELS[game.phase]}フェイズです`)
+    }
   }
 
   function clearBoardMove() {
@@ -331,6 +391,11 @@ function App() {
       const updated = mulligan(prev, playerId, selectedIds)
       return playerId === 'player2' ? { ...updated, phase: 'start' } : updated
     })
+    if (!onlineMode && screen !== 'tutorial') {
+      // ローカル対戦では、相手の手札が見えないよう交代確認を挟む。
+      setHandover({ player: playerId === 'player1' ? 'player2' : 'player1', after: playerId === 'player1' ? 'mulligan' : 'start' })
+      return
+    }
     setMulliganPreview(null)
     setMulliganSelected([])
     setSetupStage(playerId === 'player1' ? 'player2' : 'play')
@@ -588,6 +653,7 @@ function App() {
   }
 
   function nextPhase() {
+    if (handover) return
     if (screen === 'tutorial') return
     if (!isMyTurn || online.busy || phaseLockRef.current) return
     if (game.winner || pendingEquip || game.pendingEffect) { setMessage('先に装備またはモンスターの任意効果を選んでください'); return }
@@ -604,6 +670,13 @@ function App() {
       next = { ...game, phase: 'end' }
     } else {
       next = switchTurn(game)
+    }
+    // ローカル対戦のターン交代では、相手の手札が見えないよう確認画面を挟む。
+    if (!onlineMode && next.activePlayer !== game.activePlayer) {
+      setPendingTurn(next)
+      setHandover({ player: next.activePlayer, after: 'turn' })
+      setMessage('端末を渡してください。次のプレイヤーの番です')
+      return
     }
     lockPhase(next.turn !== game.turn || next.activePlayer !== game.activePlayer ? 'turn' : next.phase === 'draw' ? 'draw' : 'phase')
     setGame(next)
@@ -684,7 +757,7 @@ function App() {
             setPendingSpellMove(null)
             animateBoardMove(movement, survives, battle)
             spellMoveTimer.current = null
-          }, 1260)
+          }, 800)
         } else animateBoardMove(movement, survives, battle)
       }
       if (newDeaths.length && effectsEnabled) {
@@ -701,7 +774,7 @@ function App() {
           }
           return cellIndex < 0 ? [] : [{ ...dead, cellIndex }]
         })
-        if (deaths.length) animateGraveyardFlight(deaths, isSpellMove ? 1690 : movement ? 450 : 130)
+        if (deaths.length) animateGraveyardFlight(deaths, isSpellMove ? 1100 : movement ? 450 : 130)
       }
       // 通常の配置と移動は別演出。移動元・移動先の汎用点滅は重ねない。
       if (changed.length) setFlashCells(movement ? changed.filter(i => i !== movement.from && i !== movement.to) : changed)
@@ -735,7 +808,7 @@ function App() {
           delayedVictoryTimer.current = window.setTimeout(() => {
             setVisualCue({ ...victory, stamp: ++cueCounter.current })
             delayedVictoryTimer.current = null
-          }, 1250)
+          }, 900)
         } else next = victory
       } else if (current.turn !== previous.turn || current.activePlayer !== previous.activePlayer) {
         next = { kind: 'turn', title: current.activePlayer === owner ? 'YOUR TURN' : 'OPPONENT TURN', subtitle: `TURN ${current.turn}　${displayPlayer(current.activePlayer)}` }
@@ -786,7 +859,7 @@ function App() {
 
   useEffect(() => {
     if (!visualCue) return
-    const timer = window.setTimeout(() => setVisualCue(null), visualCue.kind === 'victory' ? 2800 : visualCue.kind === 'turn' ? 1500 : visualCue.kind === 'phase' || visualCue.kind === 'draw' ? 950 : 1100)
+    const timer = window.setTimeout(() => setVisualCue(null), visualCue.kind === 'victory' ? 1800 : visualCue.kind === 'turn' ? 1000 : visualCue.kind === 'phase' || visualCue.kind === 'draw' ? 700 : 800)
     return () => window.clearTimeout(timer)
   }, [visualCue])
 
@@ -828,17 +901,17 @@ function App() {
 
   useEffect(() => {
     if (!magicCue) return
-    const timer = window.setTimeout(() => setMagicCue(null), 1250)
+    const timer = window.setTimeout(() => setMagicCue(null), 800)
     return () => window.clearTimeout(timer)
   }, [magicCue])
   useEffect(() => {
     if (!optionalEffectCue) return
-    const timer = window.setTimeout(() => setOptionalEffectCue(null), 950)
+    const timer = window.setTimeout(() => setOptionalEffectCue(null), 700)
     return () => window.clearTimeout(timer)
   }, [optionalEffectCue])
   useEffect(() => {
     if (!equipmentCue) return
-    const timer = window.setTimeout(() => setEquipmentCue(null), 1350)
+    const timer = window.setTimeout(() => setEquipmentCue(null), 850)
     return () => window.clearTimeout(timer)
   }, [equipmentCue])
 
@@ -906,7 +979,7 @@ function App() {
       || (game.phase === 'develop' && game.territoryPlayedThisTurn)
       || (game.phase === 'move' && game.moveUsedThisTurn)
     if (!auto) return
-    const desired = game.phase === 'start' ? 1450 : game.phase === 'draw' ? 1250 : game.phase === 'end' ? 1400 : 1550
+    const desired = game.phase === 'start' ? 1000 : game.phase === 'draw' ? 900 : game.phase === 'end' ? 1000 : 1100
     const delay = Math.max(90, desired - (Date.now() - phaseClock.current.at))
     const timer = window.setTimeout(() => nextPhase(), delay)
     return () => window.clearTimeout(timer)
@@ -968,6 +1041,8 @@ function App() {
     setSetupStage('player1')
     setMulliganSelected([])
     setMulliganPreview(null)
+    setHandover(null)
+    setPendingTurn(null)
     releasePhaseLock()
     resetSelection()
     setInspect(null)
@@ -1083,7 +1158,7 @@ function App() {
         <div className="deck-library-tabs">{DECK_ELEMENTS.map(element => <button type="button" key={element} className={element === deckBrowseElement ? 'active' : ''} onClick={() => { setDeckBrowseElement(element); setDeckBrowseCardId(deckRecipe(element)[0].cardId) }}>{element}属性デッキ</button>)}</div>
         <p>基礎領土16枚 ＋ そのほか8種類を各3枚。カード画像をクリックすると詳細が見られます。</p>
         <div className="deck-library-layout">
-          <div className="deck-library-grid">{recipe.map(({ cardId, count }) => <button type="button" key={cardId} className={`deck-library-card ${deckBrowseCardId === cardId ? 'active' : ''}`} onClick={() => setDeckBrowseCardId(cardId)}>
+          <div className="deck-library-grid">{recipe.map(({ cardId, count }) => <button type="button" key={cardId} className={`deck-library-card ${deckBrowseCardId === cardId ? 'active' : ''} ${cardInfo(cardId)?.category?.includes('領土') ? 'territory-card' : ''}`} onClick={() => setDeckBrowseCardId(cardId)}>
             <img src={cardImage(cardId)} alt={cardName(cardId)} />
             {typeof cardInfo(cardId)?.requiredTerritories === 'number' &&
               <span className="territory-badge territory-badge-deck" title={`必要領土数 ${cardInfo(cardId)!.requiredTerritories}枚`}>◆ 領土{cardInfo(cardId)!.requiredTerritories}</span>}
@@ -1191,6 +1266,7 @@ function App() {
     const revealReady = mulliganSorted && mulliganSortComplete && mulliganRevealCount >= cardsToDeal.length
     return (
       <main className="game-app">
+        {handoverDialog}
         <header className="game-header"><div><h1>Lane Frontier</h1><p>ゲームの準備・初手の引き直し <span className="test-tag">{BUILD_LABEL}</span></p></div><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button></header>
         <section className="mulligan-screen">
           <div className="setup-progress">{mulliganPlayer === 'player1' ? '1 / 2' : '2 / 2'}　{displayPlayer(mulliganPlayer)}</div>
@@ -1205,12 +1281,13 @@ function App() {
               const isVisible = !cardsToDeal.includes(card.instanceId) || cardsShowing.includes(card.instanceId)
               return (
                 <button type="button" key={card.instanceId} data-mulligan-id={card.instanceId}
-                  className={`mulligan-card ${selectionOrder >= 0 ? 'mulligan-chosen' : ''} ${isVisible ? 'dealt-in' : 'deal-hidden'} ${mulliganPreview ? 'mulligan-preview-card' : ''}`}
+                  className={`mulligan-card ${selectionOrder >= 0 ? 'mulligan-chosen' : ''} ${isVisible ? 'dealt-in' : 'deal-hidden'} ${mulliganPreview ? 'mulligan-preview-card' : ''} ${cardInfo(card.cardId)?.category?.includes('領土') ? 'territory-card' : ''}`}
                   disabled={!revealReady || !!mulliganPreview || !isVisible}
                   aria-pressed={selectionOrder >= 0}
                   onClick={() => toggleMulliganCard(card.instanceId)}
                   title={`${cardName(card.cardId)}${mulliganPreview ? '（引き直し後）' : '：クリックで選択・解除'}`}>
                   <img src={cardImage(card.cardId)} alt={cardName(card.cardId)} />
+                  <span className="mulligan-card-name">{cardName(card.cardId)}</span>
                   {typeof cardInfo(card.cardId)?.requiredTerritories === 'number' &&
                     <span className="territory-badge territory-badge-mulligan" title={`必要領土数 ${cardInfo(card.cardId)!.requiredTerritories}枚`}>◆ 領土{cardInfo(card.cardId)!.requiredTerritories}</span>}
                   {selectionOrder >= 0 && <span className="mulligan-order">戻す順 {selectionOrder + 1}</span>}
@@ -1220,6 +1297,7 @@ function App() {
             })}
           </div>
           {!revealReady && <p className="mulligan-dealing-label" aria-live="polite">{mulliganPreview ? '引き直したカードを確認中' : '初期手札を配布中'}… {Math.min(mulliganRevealCount, cardsToDeal.length)} / {cardsToDeal.length}{mulliganRevealCount === cardsToDeal.length ? '　整列中…' : ''}</p>}
+          {!revealReady && <div className="mulligan-dealing-progress" role="progressbar" aria-valuenow={Math.min(mulliganRevealCount, cardsToDeal.length)} aria-valuemin={0} aria-valuemax={cardsToDeal.length} aria-label="初期手札の配布状況"><span style={{ width: `${cardsToDeal.length ? Math.min(mulliganRevealCount, cardsToDeal.length) / cardsToDeal.length * 100 : 0}%` }} /></div>}
           <p className="mulligan-count">{mulliganPreview
             ? `引き直したカード：${mulliganPreview.drawnIds.length}枚　／　城${mulliganPreview.game.players[mulliganPlayer].deck.length}枚`
             : `引き直すカード：${mulliganSelected.length}枚　／　初手7枚・城${game.players[mulliganPlayer].deck.length}枚`}</p>
@@ -1352,7 +1430,9 @@ function App() {
         <section className="field-panel" id="lf-battle-board">
           <div className="panel-title"><h2>戦場</h2><span>{displayPlayer(owner)}視点</span></div>
           <div className="board-orientation">
+            <span className="board-orientation-player">{fixedOrientation ? '盤面固定：プレイヤー1の城が下' : `${displayPlayer(owner)}視点 ・ 自分の城は下`}</span>
             <span>↑ 相手の城</span>
+            <button type="button" className="small-btn orientation-toggle" aria-pressed={fixedOrientation} onClick={() => setFixedOrientation(v => !v)}>{fixedOrientation ? '盤面を手番に合わせる' : '盤面を固定する'}</button>
             <div className="territory-owner-legend" aria-label="領土の枠色の説明">
               <div className="legend-entry"><i className="legend-frame legend-mine" aria-hidden="true" />青：自分の領土</div>
               <div className="legend-entry"><i className="legend-frame legend-rival" aria-hidden="true" />赤：相手の領土</div>
@@ -1363,7 +1443,7 @@ function App() {
               selectedCard?.cardId === 'LF-023' ? '手札から捨てるカードをクリックしてください（もう一度マジックを押すと解除）' :
                 `使用対象をクリック：${cardName(selectedCard?.cardId ?? '')}（水色の「対象」を選択）` :
               game.phase === 'move' ? '自分のモンスター → 黄色い移動先をクリック（1ターンに1体）' :
-              selectedCard ? `配置先をクリック：${cardName(selectedCard.cardId)}` : '手札を選んでから、配置するマスをクリック'}
+              selectedCard ? `配置先をクリック：${cardName(selectedCard.cardId)}。${placementHint}` : game.phase === 'develop' ? '手札から領土カードを選んでください（自分の城・領土に隣接する空きマスに置けます）' : '手札を選んでから、配置するマスをクリック'}
           </p>
           <div className="board-grid" ref={boardRef}>
             {boardIndices.map(index => {
@@ -1444,14 +1524,13 @@ function App() {
               </div>)}
             </>}
           </div>
-          <p className="board-hint">↓ 自分の城</p>
+          <p className="board-hint">{fixedOrientation ? '↓ プレイヤー1の城' : '↓ 自分の城'}</p>
         </section>
 
       <section className="hand-panel" id="lf-battle-hand">
         <div className="panel-title"><h2>手札 <span className="count-label">{player.hand.length}枚</span></h2><span className="territory-hand-summary">◆ 自分の領土 {territoryCount(game, owner)}枚 <small>緑：条件達成 / 赤：不足</small></span></div>
         <div className="hand-phase-controls">
           <div className="hand-phase-label" aria-live="polite">
-            <strong>{displayPlayer(game.activePlayer)}の手番</strong>
             <span>ターン {game.turn} ・ {PHASE_LABELS[game.phase]}フェイズ</span>
           </div>
           <button type="button" className="phase-next hand-phase-next" onClick={nextPhase}
@@ -1476,7 +1555,7 @@ function App() {
               setSelectedId(prev => prev === card.instanceId ? null : card.instanceId)
               setMovingFrom(null)
             }}
-              className={`hand-card ${card.instanceId === selectedId ? 'selected-card' : ''} ${effectsEnabled && newHandCards.includes(card.instanceId) ? 'newly-drawn' : ''} ${discardingForOcean && card.instanceId !== selectedCard?.instanceId ? 'discard-candidate' : ''}`}
+              className={`hand-card ${card.instanceId === selectedId ? 'selected-card' : ''} ${effectsEnabled && newHandCards.includes(card.instanceId) ? 'newly-drawn' : ''} ${discardingForOcean && card.instanceId !== selectedCard?.instanceId ? 'discard-candidate' : ''} ${cardInfo(card.cardId)?.category?.includes('領土') ? 'territory-card' : ''}`}
               title={`${cardName(card.cardId)}（${cardInfo(card.cardId)?.category}／${cardInfo(card.cardId)?.element}）${typeof cardInfo(card.cardId)?.requiredTerritories === 'number' ? `・必要領土${cardInfo(card.cardId)!.requiredTerritories}枚／現在${territoryCount(game, owner)}枚` : ''}`}>
               <img src={cardImage(card.cardId)} alt={cardName(card.cardId)} />
               <span className="hand-card-name">{cardName(card.cardId)}</span>
@@ -1640,6 +1719,8 @@ function App() {
           <span className="visual-subtitle">{visualCue.subtitle}</span>
         </div>
       </div>}
+      {effectsEnabled && (visualCue || magicCue || equipmentCue) && <button type="button" className="effect-skip-button" onClick={skipEffects}>演出スキップ ✕</button>}
+      {handoverDialog}
       {zoomCardId && <div className="card-zoom-overlay" role="presentation" onMouseDown={() => setZoomCardId(null)}>
         <div className="card-zoom-dialog" role="dialog" aria-modal="true" aria-label={`${cardName(zoomCardId)}の拡大表示`} onMouseDown={(e: { stopPropagation: () => void }) => e.stopPropagation()}>
           <button type="button" className="card-zoom-close" onClick={() => setZoomCardId(null)} aria-label="閉じる">×</button>
