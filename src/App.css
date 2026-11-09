@@ -49,7 +49,7 @@
 .hand-card { width: 76px; height: 138px; padding: 4px 4px 5px; background: #243a41; border: 1px solid #809496; border-radius: 5px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
 .hand-card.selected-card { border: 3px solid #e9c16f; box-shadow: 0 0 10px #e2af5499; }
 .hand-card img { flex: 1 1 auto; min-height: 0; width: 100%; height: auto; object-fit: contain; }
-.hand-card-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: 0 0 auto; min-height: 2.5em; font-size: 11px; line-height: 1.25; font-weight: 700; color: #fff6df; text-align: center; text-shadow: 0 1px 3px #000; overflow-wrap: anywhere; }
+.hand-card-name { display: -webkit-box; -webkit-line-clamp: 2; background:#1d3138; border-radius:3px; padding:2px 3px; -webkit-box-orient: vertical; overflow: hidden; flex: 0 0 auto; min-height: 2.5em; font-size: 11px; line-height: 1.25; font-weight: 700; color: #fff6df; text-align: center; text-shadow: 0 1px 3px #000; overflow-wrap: anywhere; }
 /* 領土カードは横長画像のため幅を広げ、帯状の空きを減らす。 */
 .hand-card.territory-card { width: 106px; }
 .hand-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 48px; margin-top: 8px; font-size: 13px; }
@@ -294,9 +294,9 @@
   padding: 2px 4px 5px;
 }
 .game-in-play .hand-card {
-  flex: 0 0 65px;
-  width: 65px;
-  height: 91px;
+  flex: 0 0 74px;
+  width: 74px;
+  height: 138px;
   border-radius: 6px;
   background: #27404b;
 }
@@ -423,7 +423,7 @@
     flex-wrap: wrap; justify-content: center;
     align-content: flex-start;
     overflow-y: auto; overflow-x: hidden;
-    gap: 9px 7px; padding: 8px 2px;
+    gap: 9px 7px; padding: 8px 2px 18px;
     margin: 3px 0;
   }
   .game-in-play .hand-card { flex: 0 0 74px; width: 74px; height: 132px; }
@@ -809,8 +809,8 @@
   transform-origin:bottom center;
   transition: transform .2s cubic-bezier(.2,.9,.3,1.1), box-shadow .2s, border-color .2s;
 }
-.game-in-play .hand-card:hover { transform:translateY(-9px) scale(1.06); z-index:3; box-shadow:0 14px 22px #0009; }
-.game-in-play .hand-card.selected-card { transform:translateY(-12px) scale(1.055); z-index:4; border-color:#f7d488; box-shadow:0 0 0 2px #e5c37d,0 13px 25px #000a,0 0 25px #eac26c70; }
+.game-in-play .hand-card:hover { transform:none; z-index:3; box-shadow:0 6px 14px #0009; }
+.game-in-play .hand-card.selected-card { transform:translateY(-2px); z-index:4; border-color:#f7d488; box-shadow:0 0 0 2px #e5c37d,0 13px 25px #000a,0 0 25px #eac26c70; }
 .game-in-play .hand-card.newly-drawn {animation:lfDrawIn .55s cubic-bezier(.17,.9,.3,1.13) both;}
 @keyframes lfDrawIn {from{opacity:0;transform:translateY(-45px) rotate(-11deg) scale(.77);filter:brightness(1.8);}to{opacity:1;transform:translateY(0) rotate(0) scale(1);filter:brightness(1);}}
 .game-in-play .hand-phase-controls {background:linear-gradient(90deg,#294b51,#1f3e48);border-color:#6b8480;}
