@@ -125,8 +125,6 @@ function App() {
   const [phaseLocked, setPhaseLocked] = useState(false)
   // UI改善：盤面の向き固定・ローカル対戦の交代確認・演出スキップ用（ルール不変）。
   const [fixedOrientation, setFixedOrientation] = useState(false)
-  const [handover, setHandover] = useState<{ player: PlayerId; after: 'turn' | 'mulligan' | 'start' } | null>(null)
-  const [pendingTurn, setPendingTurn] = useState<GameState | null>(null)
   const phaseLockRef = useRef(false)
   const phaseLockTimer = useRef<number | null>(null)
   const phaseClock = useRef({ key: '', at: Date.now() })
@@ -209,19 +207,6 @@ function App() {
       : selectedData.category === '装備'
         ? '自分のモンスターがいる領土に置けます'
         : ''
-  // ローカル対戦の交代確認画面。手札はこの画面の裏に隠れる。
-  const handoverDialog = handover && !onlineMode ? (
-    <div className="handover-overlay" role="dialog" aria-modal="true" aria-labelledby="handover-title">
-      <div className="handover-card">
-        <span className="handover-kicker">プレイヤー交代</span>
-        <h2 id="handover-title">{displayPlayer(handover.player)}の番です</h2>
-        <p>端末を渡してください。この画面では手札は表示されていません。</p>
-        <button type="button" className="phase-next handover-start" onClick={confirmHandover}>{displayPlayer(handover.player)}の番を始める →</button>
-        <button type="button" className="small-btn handover-home" onClick={goHome}>ホームに戻る</button>
-      </div>
-    </div>
-  ) : null
-
   // v0.15.0で保存した古い盤面も一度消す。
   useEffect(() => {
     try { localStorage.removeItem(LEGACY_SAVE_KEY) } catch { /* 保存にアクセスできなくても対戦可能 */ }
@@ -256,42 +241,6 @@ function App() {
       phaseLockRef.current = false
       setPhaseLocked(false)
     }, kind === 'spellmove' ? 1400 : kind === 'spell' ? 800 : kind === 'combat' ? 1000 : kind === 'turn' ? 900 : kind === 'equipment' ? 900 : kind === 'move' ? 800 : kind === 'deploy' ? 800 : 600)
-  }
-
-  // 演出スキップ：カットイン類を消し、フェイズ進行の待ちも解除する（描画のみ）。
-  function skipEffects() {
-    setVisualCue(null)
-    setMagicCue(null)
-    setEquipmentCue(null)
-    setOptionalEffectCue(null)
-    clearBoardMove()
-    releasePhaseLock()
-  }
-
-  // ローカル対戦の交代確認：保留していた次の状態を適用する。
-  function confirmHandover() {
-    if (!handover) return
-    const target = handover
-    setHandover(null)
-    if (target.after === 'turn' && pendingTurn) {
-      const next = pendingTurn
-      setPendingTurn(null)
-      setGame(next)
-      resetSelection()
-      setInspect(null)
-      setInspectedEquipmentId(null)
-      setMessage(next.winner ? `${displayPlayer(next.winner)}の勝利！ ${next.winReason}` : `${PHASE_LABELS[next.phase]}フェイズです`)
-    } else if (target.after === 'mulligan') {
-      setMulliganPreview(null)
-      setMulliganSelected([])
-      setSetupStage(target.player)
-      setMessage(`${displayPlayer(target.player)}のマリガンです`)
-    } else {
-      setMulliganPreview(null)
-      setMulliganSelected([])
-      setSetupStage('play')
-      setMessage(`${PHASE_LABELS[game.phase]}フェイズです`)
-    }
   }
 
   function clearBoardMove() {
@@ -391,11 +340,6 @@ function App() {
       const updated = mulligan(prev, playerId, selectedIds)
       return playerId === 'player2' ? { ...updated, phase: 'start' } : updated
     })
-    if (!onlineMode && screen !== 'tutorial') {
-      // ローカル対戦では、相手の手札が見えないよう交代確認を挟む。
-      setHandover({ player: playerId === 'player1' ? 'player2' : 'player1', after: playerId === 'player1' ? 'mulligan' : 'start' })
-      return
-    }
     setMulliganPreview(null)
     setMulliganSelected([])
     setSetupStage(playerId === 'player1' ? 'player2' : 'play')
@@ -653,7 +597,6 @@ function App() {
   }
 
   function nextPhase() {
-    if (handover) return
     if (screen === 'tutorial') return
     if (!isMyTurn || online.busy || phaseLockRef.current) return
     if (game.winner || pendingEquip || game.pendingEffect) { setMessage('先に装備またはモンスターの任意効果を選んでください'); return }
@@ -670,13 +613,6 @@ function App() {
       next = { ...game, phase: 'end' }
     } else {
       next = switchTurn(game)
-    }
-    // ローカル対戦のターン交代では、相手の手札が見えないよう確認画面を挟む。
-    if (!onlineMode && next.activePlayer !== game.activePlayer) {
-      setPendingTurn(next)
-      setHandover({ player: next.activePlayer, after: 'turn' })
-      setMessage('端末を渡してください。次のプレイヤーの番です')
-      return
     }
     lockPhase(next.turn !== game.turn || next.activePlayer !== game.activePlayer ? 'turn' : next.phase === 'draw' ? 'draw' : 'phase')
     setGame(next)
@@ -1041,8 +977,6 @@ function App() {
     setSetupStage('player1')
     setMulliganSelected([])
     setMulliganPreview(null)
-    setHandover(null)
-    setPendingTurn(null)
     releasePhaseLock()
     resetSelection()
     setInspect(null)
@@ -1266,7 +1200,6 @@ function App() {
     const revealReady = mulliganSorted && mulliganSortComplete && mulliganRevealCount >= cardsToDeal.length
     return (
       <main className="game-app">
-        {handoverDialog}
         <header className="game-header"><div><h1>Lane Frontier</h1><p>ゲームの準備・初手の引き直し <span className="test-tag">{BUILD_LABEL}</span></p></div><button type="button" className="small-btn" onClick={goHome}>ホームに戻る</button></header>
         <section className="mulligan-screen">
           <div className="setup-progress">{mulliganPlayer === 'player1' ? '1 / 2' : '2 / 2'}　{displayPlayer(mulliganPlayer)}</div>
@@ -1719,8 +1652,6 @@ function App() {
           <span className="visual-subtitle">{visualCue.subtitle}</span>
         </div>
       </div>}
-      {effectsEnabled && (visualCue || magicCue || equipmentCue) && <button type="button" className="effect-skip-button" onClick={skipEffects}>演出スキップ ✕</button>}
-      {handoverDialog}
       {zoomCardId && <div className="card-zoom-overlay" role="presentation" onMouseDown={() => setZoomCardId(null)}>
         <div className="card-zoom-dialog" role="dialog" aria-modal="true" aria-label={`${cardName(zoomCardId)}の拡大表示`} onMouseDown={(e: { stopPropagation: () => void }) => e.stopPropagation()}>
           <button type="button" className="card-zoom-close" onClick={() => setZoomCardId(null)} aria-label="閉じる">×</button>
